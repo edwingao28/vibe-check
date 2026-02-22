@@ -1,0 +1,7 @@
+{
+  "name": "slop-detector",
+  "version": "0.1.0",
+  "description": "Detects AI-generated slop in web projects",
+  "author": "vibe-check",
+  "skills": ["skills/slop-check"]
+}

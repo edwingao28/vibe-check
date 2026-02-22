@@ -1,0 +1,133 @@
+# =============================================================================
+# .sloprc.defaults.yaml — Default configuration for slop-detector v0.1.0
+# =============================================================================
+#
+# Copy this file to your project root as `.sloprc`, `.sloprc.yaml`, or
+# `.sloprc.yml` and customize as needed. The scanner merges your overrides
+# with these defaults.
+#
+# Only the fields listed below are implemented in v1. See SPEC.md §9 for
+# the full schema planned for v2.
+# =============================================================================
+
+# ---------------------------------------------------------------------------
+# Scan Scope
+# ---------------------------------------------------------------------------
+# Control which files and directories are included in the scan.
+#
+# The scanner always excludes these patterns by default:
+#   node_modules/  .next/  dist/  build/  .turbo/  coverage/  .git/
+#   public/  __tests__/  *.test.*  *.spec.*  *.stories.*
+#
+# Add additional exclude globs here (merged with defaults, not replacing them).
+scope:
+  exclude: []
+    # Examples:
+    # - "legacy/**"          # Skip legacy code directory
+    # - "packages/docs/**"   # Skip documentation package
+    # - "**/*.generated.*"   # Skip auto-generated files
+
+# ---------------------------------------------------------------------------
+# Signal Configuration
+# ---------------------------------------------------------------------------
+signals:
+
+  # Signals to skip entirely. Use signal IDs from the list below.
+  #
+  # Available signal IDs:
+  #   font-crime, purple-plague, whitespace-wasteland, shadow-realm,
+  #   border-radius-maximum, gradient-overload, hero-syndrome,
+  #   buzzword-bingo, cookie-cutter-layout, cta-mania
+  disabled: []
+    # Example:
+    # - "gradient-overload"  # Gradients are intentional in this project
+
+  # Per-signal warn and error thresholds (0.0 to 1.0 scale).
+  # - warn: score at which a signal is flagged as a suggestion
+  # - error: score at which a signal is flagged as a significant issue
+  #
+  # Lower thresholds = more sensitive. Higher thresholds = more lenient.
+  thresholds:
+    font-crime:
+      warn: 0.4
+      error: 0.7
+    purple-plague:
+      warn: 0.4
+      error: 0.7
+    whitespace-wasteland:
+      warn: 0.4
+      error: 0.7
+    shadow-realm:
+      warn: 0.4
+      error: 0.7
+    border-radius-maximum:
+      warn: 0.4
+      error: 0.7
+    gradient-overload:
+      warn: 0.4
+      error: 0.7
+    hero-syndrome:
+      warn: 0.4
+      error: 0.7
+    buzzword-bingo:
+      warn: 0.4
+      error: 0.7
+    cookie-cutter-layout:
+      warn: 0.4
+      error: 0.7
+    cta-mania:
+      warn: 0.4
+      error: 0.7
+
+  # Category weights for overall slop score calculation.
+  # Higher weight = more influence on the overall score.
+  # The overall score uses power mean (p=2) aggregation.
+  categoryWeights:
+    typography-color: 1.0   # Font Crime, Purple Plague
+    spacing-effects: 1.0    # Whitespace Wasteland, Shadow Realm, Border Radius Maximum, Gradient Overload
+    content: 0.8            # Buzzword Bingo, Hero Syndrome
+    structure: 0.8          # Cookie Cutter Layout, CTA Mania
+
+# ---------------------------------------------------------------------------
+# Intent Declaration
+# ---------------------------------------------------------------------------
+# Declare project-specific design intent to suppress false positives.
+# Intent evidence increases the Intent Score, which attenuates aesthetic
+# signals (font-crime, purple-plague, border-radius-maximum, shadow-realm).
+intent:
+
+  palette:
+    # Brand colors (hex format). Colors matching these values will not
+    # trigger hue-based signals like Purple Plague.
+    brandColors: []
+      # Examples:
+      # - "#7C3AED"    # Primary brand purple
+      # - "#4F46E5"    # Secondary brand indigo
+
+  tokens:
+    # CSS custom property prefixes recognized as design tokens.
+    # When the scanner finds variables matching these prefixes, it
+    # increases the Intent Score (evidence of deliberate design).
+    cssVarPrefixes: []
+      # Examples:
+      # - "--color-"    # Color tokens
+      # - "--space-"    # Spacing tokens
+      # - "--radius-"   # Border radius tokens
+      # - "--shadow-"   # Shadow tokens
+
+# ---------------------------------------------------------------------------
+# Suppressions
+# ---------------------------------------------------------------------------
+# Control inline suppression behavior.
+#
+# Inline suppressions use comments to silence specific signals:
+#   CSS:  /* slop-ignore: signal-id */
+#   JSX:  {/* slop-ignore: signal-id */}
+#   JS:   // slop-ignore: signal-id
+#
+# Multiple signals: /* slop-ignore: shadow-realm, gradient-overload */
+suppressions:
+
+  # Whether inline slop-ignore comments are honored.
+  # Set to false to ignore all inline suppressions.
+  allowInline: true
