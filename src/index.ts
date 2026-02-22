@@ -11,11 +11,13 @@
 
 import { parseArgs } from "node:util";
 import { resolve, extname } from "node:path";
+import { writeFileSync } from "node:fs";
 
 import { loadConfig } from "./config/loader.js";
 import { resolveScope } from "./scope/resolver.js";
 import { IRStore } from "./ir/store.js";
 import { generateReport } from "./output/json-reporter.js";
+import { generateMarkdownReport } from "./output/md-reporter.js";
 
 // Extractors
 import { extractCss } from "./extractors/css.js";
@@ -65,6 +67,7 @@ async function main(): Promise<void> {
     options: {
       verbose: { type: "boolean", default: false },
       json: { type: "boolean", default: false },
+
       deep: { type: "boolean", default: false },
       full: { type: "boolean", default: false },
       "no-cache": { type: "boolean", default: false },
@@ -98,6 +101,7 @@ async function main(): Promise<void> {
   const flags: string[] = [];
   if (values.verbose) flags.push("--verbose");
   if (values.json) flags.push("--json");
+
   if (values.deep) flags.push("--deep");
   if (values.full) flags.push("--full");
   if (values["no-cache"]) flags.push("--no-cache");
@@ -221,6 +225,12 @@ async function main(): Promise<void> {
   // 10. Output to stdout
   const output = JSON.stringify(report, null, values.json ? 2 : 2);
   console.log(output);
+
+  // 11. Write markdown report (always)
+  const mdPath = resolve(projectRoot, "slop-report.md");
+  const markdown = generateMarkdownReport(report);
+  writeFileSync(mdPath, markdown, "utf-8");
+  console.error(`Markdown report written to ${mdPath}`);
 
   // Exit code 0 always (exit codes are a v2 feature)
   process.exit(0);

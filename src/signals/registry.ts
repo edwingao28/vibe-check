@@ -28,6 +28,10 @@ import { heroSyndrome } from "./hero-syndrome.js";
 import { buzzwordBingo } from "./buzzword-bingo.js";
 import { cookieCutterLayout } from "./cookie-cutter-layout.js";
 import { ctaMania } from "./cta-mania.js";
+import { emojiInfestation } from "./emoji-infestation.js";
+import { testimonialFactory } from "./testimonial-factory.js";
+import { cardCarnival } from "./card-carnival.js";
+import { stockPhotoSyndrome } from "./stock-photo-syndrome.js";
 
 /**
  * Tier 1 signal definitions (deterministic, always run).
@@ -49,6 +53,10 @@ export const tier2Signals: SignalDefinition[] = [
   buzzwordBingo,
   cookieCutterLayout,
   ctaMania,
+  emojiInfestation,
+  testimonialFactory,
+  cardCarnival,
+  stockPhotoSyndrome,
 ];
 
 /**

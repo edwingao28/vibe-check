@@ -15,8 +15,8 @@ describe("Signal Registry", () => {
 
     const results = runSignals(ctx, DEFAULT_CONFIG);
 
-    // Should have results for all 10 signals (6 Tier 1 + 4 Tier 2)
-    expect(results.length).toBe(10);
+    // Should have results for all 14 signals (6 Tier 1 + 8 Tier 2)
+    expect(results.length).toBe(14);
 
     const ids = results.map((r) => r.id);
     expect(ids).toContain("font-crime");
@@ -29,6 +29,10 @@ describe("Signal Registry", () => {
     expect(ids).toContain("buzzword-bingo");
     expect(ids).toContain("cookie-cutter-layout");
     expect(ids).toContain("cta-mania");
+    expect(ids).toContain("emoji-infestation");
+    expect(ids).toContain("testimonial-factory");
+    expect(ids).toContain("card-carnival");
+    expect(ids).toContain("stock-photo-syndrome");
   });
 
   it("skips disabled signals", () => {
@@ -49,7 +53,7 @@ describe("Signal Registry", () => {
 
     expect(ids).not.toContain("font-crime");
     expect(ids).not.toContain("shadow-realm");
-    expect(results.length).toBe(8); // 10 total - 2 disabled
+    expect(results.length).toBe(12); // 14 total - 2 disabled
   });
 
   it("returns insufficient_data when ALL dependencies failed", () => {
@@ -140,8 +144,8 @@ describe("Signal Registry", () => {
 
   it("exports tier1Signals, tier2Signals, and allSignals arrays", () => {
     expect(tier1Signals).toHaveLength(6);
-    expect(tier2Signals).toHaveLength(4);
-    expect(allSignals).toHaveLength(10);
+    expect(tier2Signals).toHaveLength(8);
+    expect(allSignals).toHaveLength(14);
 
     // allSignals should contain all tier1 and tier2 signals
     for (const signal of [...tier1Signals, ...tier2Signals]) {
@@ -191,6 +195,10 @@ describe("Signal Registry", () => {
           "buzzword-bingo",
           "cookie-cutter-layout",
           "cta-mania",
+          "emoji-infestation",
+          "testimonial-factory",
+          "card-carnival",
+          "stock-photo-syndrome",
         ],
       },
     };

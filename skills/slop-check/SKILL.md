@@ -12,45 +12,53 @@ Scan a web project for AI-generated "slop" -- telltale patterns of low-effort, t
 
 Follow these steps precisely when the user invokes `/slop-check`.
 
-### Step 1: Build the scanner (if needed)
+### Step 1: Locate the plugin directory
 
-Check whether `dist/` exists in the plugin directory. If it does not, build first:
+Use the Glob tool to search for `**/vibe-check/dist/index.js` to find the scanner binary. The plugin root is the `vibe-check/` directory that contains `dist/index.js`. If Glob finds nothing, try searching for `**/slop-detector/dist/index.js` or `**/vibe-check/package.json`.
 
-```bash
-npm run build --prefix <plugin-dir>
-```
+### Step 2: Build the scanner (if needed)
 
-Where `<plugin-dir>` is the root of the slop-detector plugin (the directory containing `package.json`).
-
-### Step 2: Run the scanner
-
-Execute the scanner via the Bash tool:
+Check whether the `dist/index.js` file was found in Step 1. If not found, the scanner needs to be built:
 
 ```bash
-npx slop-scan [path] [flags] --json
+npm run build --prefix <plugin-root>
 ```
 
-- If the user provided a `[path]` argument, pass it through.
+### Step 3: Run the scanner
+
+Execute the scanner using the absolute path to `dist/index.js` found in Step 1. Do NOT use `npx slop-scan` — the package is not published to npm.
+
+```bash
+node /absolute/path/to/vibe-check/dist/index.js [path] [flags] --json
+```
+
+For example, if Glob found `/Users/someone/dev/vibe-check/dist/index.js`, run:
+
+```bash
+node /Users/someone/dev/vibe-check/dist/index.js . --json
+```
+
+- If the user provided a `[path]` argument, pass it through. If not, use the current working directory.
 - If the user provided `--verbose`, `--deep`, or `--full`, pass those flags through.
 - Always append `--json` to get machine-readable output. If the user also passed `--json`, the scanner handles the duplicate gracefully.
 
-### Step 3: Parse the JSON output
+### Step 4: Parse the JSON output
 
 The scanner outputs a JSON object conforming to the `ScanReport` schema (v1.0.0). Extract these key fields:
 
-| Field | Path | Description |
-|-------|------|-------------|
-| Slop Score | `overall.slopScore` | 0-100 numeric score |
-| Band | `overall.band` | "Low", "Moderate", "High", or "Severe" |
-| Confidence | `overall.confidence` | "High", "Medium", or "Low" |
-| Intent Score | `intent.score` | 0-100 numeric score |
-| Intent Tier | `intent.tier` | "None", "Partial", or "Full" |
-| Files Scanned | `scope.filesScanned` | Number of files analyzed |
-| Categories | `categories[]` | Array of 4 category scores (0-1 scale) |
-| Signals | `signals[]` | Array of individual signal results |
-| Recommendations | `recommendations` | Deep scan suggestion and reason |
+| Field           | Path                 | Description                            |
+| --------------- | -------------------- | -------------------------------------- |
+| Slop Score      | `overall.slopScore`  | 0-100 numeric score                    |
+| Band            | `overall.band`       | "Low", "Moderate", "High", or "Severe" |
+| Confidence      | `overall.confidence` | "High", "Medium", or "Low"             |
+| Intent Score    | `intent.score`       | 0-100 numeric score                    |
+| Intent Tier     | `intent.tier`        | "None", "Partial", or "Full"           |
+| Files Scanned   | `scope.filesScanned` | Number of files analyzed               |
+| Categories      | `categories[]`       | Array of 4 category scores (0-1 scale) |
+| Signals         | `signals[]`          | Array of individual signal results     |
+| Recommendations | `recommendations`    | Deep scan suggestion and reason        |
 
-### Step 4: Format the report
+### Step 5: Format the report
 
 Use the **Decision Tree** to determine tone, then populate the **Output Template**.
 
@@ -61,31 +69,41 @@ Use the **Decision Tree** to determine tone, then populate the **Output Template
 Apply these rules in order to determine the framing and tone of the report:
 
 ### Rule 1: High slop urgency
+
 **If** `overall.slopScore` > 75 (Severe band):
+
 - Lead with urgency. Use phrasing like "This project shows overwhelming signs of AI-generated styling."
 - Emphasize the severity of the top-scoring signals.
 - Strongly recommend addressing the highest-scoring signals first.
 
 ### Rule 2: Design system acknowledgment
+
 **If** `intent.tier` is "Full" (intent score >= 56):
+
 - Acknowledge the design system. Use phrasing like "A design system is present, which is positive."
 - Frame high-scoring signals as "intentional but repetitive" rather than "sloppy."
 - Note that tokens and theme customization indicate deliberate choices, but the repetitive patterns still affect perceived quality.
 
 ### Rule 3: Minor suggestions
+
 **If** only 1-2 signals have scores above their warn threshold (0.4):
+
 - Frame findings as suggestions, not problems.
 - Use phrasing like "A couple of minor patterns were detected" rather than "issues found."
 - Keep the tone light and advisory.
 
 ### Rule 4: Low confidence caveat
+
 **If** `overall.confidence` is "Low":
+
 - Caveat the score prominently. Use phrasing like "Note: Limited file coverage means this score may not reflect the full project."
 - Explain what caused low coverage (check `coverage.extractors[]` for degraded/failed extractors).
 - Suggest re-running with `--full` if the smart scope missed relevant files.
 
 ### Rule 5: Deep scan recommendation
+
 **If** `recommendations.deepScanSuggested` is true:
+
 - Include the recommendation at the end of the report.
 - Use the `recommendations.reason` text as context.
 
@@ -119,11 +137,13 @@ Render each category as a 10-character bar where filled blocks represent the sco
 - Empty: unicode light shade (U+2591)
 
 Format each line as:
+
 ```
 {bar} {category.name padded to 25 chars} {score as 0-100 integer}
 ```
 
 Example:
+
 ```
 ██████████ Typography & Color    72
 ██████░░░░ Spacing & Effects     58
@@ -162,23 +182,27 @@ When the `--deep` flag was passed, perform additional LLM-assisted analysis on T
 For each Tier 2 signal that scored above 0.2 in the fast pass, re-examine its evidence:
 
 #### Buzzword Bingo
+
 - Read the `evidence[].detail` text which contains the matched buzzwords and their source context.
 - Evaluate whether the flagged language is appropriate for the project's domain.
 - Consider: Is "leverage" sloppy in a marketing page, or appropriate in a fintech product?
 - Adjust your assessment: if the language is domain-appropriate, note it as "contextually justified" and suggest the user consider adding terms to `.sloprc` removals.
 
 #### Hero Syndrome
+
 - Read the `evidence[].detail` which describes the hero section structure.
 - Evaluate whether the hero content is genuinely generic/templated or specific to the product.
 - A hero with "Welcome to our platform" + "The best solution for your needs" is sloppy.
 - A hero with "Track your fleet in real-time" + "GPS monitoring for 10,000+ vehicles" is specific.
 
 #### Cookie Cutter Layout
+
 - Read the `evidence[].detail` which lists the section fingerprints per page.
 - Evaluate whether structural similarity is intentional (design system consistency) or lazy (copy-paste).
 - If `intent.tier` is "Full", structural similarity is more likely intentional.
 
 #### CTA Mania
+
 - Read the `evidence[].detail` which lists CTA elements per page.
 - Evaluate whether the CTA density is justified by the page purpose.
 - A pricing page with 5 "Choose Plan" buttons is justified. A blog post with 5 "Sign Up" buttons is not.
@@ -203,6 +227,7 @@ Append a section to the report:
 ### Example 1: High Slop (Severe)
 
 **Scanner JSON (abbreviated):**
+
 ```json
 {
   "overall": { "slopScore": 82, "band": "Severe", "confidence": "High" },
@@ -215,20 +240,86 @@ Append a section to the report:
     { "id": "structure", "name": "Structure", "score": 0.71 }
   ],
   "signals": [
-    { "id": "font-crime", "name": "Font Crime", "score": 0.92, "status": "scored",
-      "evidence": [{ "summary": "1 font family ('Inter') across 34 components", "files": ["src/app/layout.tsx:3"] }] },
-    { "id": "purple-plague", "name": "Purple Plague", "score": 0.84, "status": "scored",
-      "evidence": [{ "summary": "Purple hues dominate 73% of chromatic colors (41/56)", "files": ["src/globals.css:12", "src/components/Hero.tsx:8"] }] },
-    { "id": "whitespace-wasteland", "name": "Whitespace Wasteland", "score": 0.78, "status": "scored",
-      "evidence": [{ "summary": "Spacing entropy 0.9 (very low); 2 unique values in 187 declarations", "files": ["project-wide"] }] },
-    { "id": "shadow-realm", "name": "Shadow Realm", "score": 0.71, "status": "scored",
-      "evidence": [{ "summary": "Shadows on 74% of components (25/34)", "files": ["src/components/Card.tsx:5", "src/components/Feature.tsx:12"] }] },
-    { "id": "buzzword-bingo", "name": "Buzzword Bingo", "score": 0.81, "status": "scored",
-      "evidence": [{ "summary": "18 buzzwords detected (density 8.4); phrases: 'revolutionize your workflow', 'in today's fast-paced world'", "files": ["src/app/page.tsx:15", "src/components/Hero.tsx:4"] }] },
-    { "id": "hero-syndrome", "name": "Hero Syndrome", "score": 0.90, "status": "scored",
-      "evidence": [{ "summary": "Generic hero template: h1 + paragraph + CTA button, content is non-specific", "files": ["src/components/Hero.tsx:1"] }] }
+    {
+      "id": "font-crime",
+      "name": "Font Crime",
+      "score": 0.92,
+      "status": "scored",
+      "evidence": [
+        {
+          "summary": "1 font family ('Inter') across 34 components",
+          "files": ["src/app/layout.tsx:3"]
+        }
+      ]
+    },
+    {
+      "id": "purple-plague",
+      "name": "Purple Plague",
+      "score": 0.84,
+      "status": "scored",
+      "evidence": [
+        {
+          "summary": "Purple hues dominate 73% of chromatic colors (41/56)",
+          "files": ["src/globals.css:12", "src/components/Hero.tsx:8"]
+        }
+      ]
+    },
+    {
+      "id": "whitespace-wasteland",
+      "name": "Whitespace Wasteland",
+      "score": 0.78,
+      "status": "scored",
+      "evidence": [
+        {
+          "summary": "Spacing entropy 0.9 (very low); 2 unique values in 187 declarations",
+          "files": ["project-wide"]
+        }
+      ]
+    },
+    {
+      "id": "shadow-realm",
+      "name": "Shadow Realm",
+      "score": 0.71,
+      "status": "scored",
+      "evidence": [
+        {
+          "summary": "Shadows on 74% of components (25/34)",
+          "files": [
+            "src/components/Card.tsx:5",
+            "src/components/Feature.tsx:12"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "buzzword-bingo",
+      "name": "Buzzword Bingo",
+      "score": 0.81,
+      "status": "scored",
+      "evidence": [
+        {
+          "summary": "18 buzzwords detected (density 8.4); phrases: 'revolutionize your workflow', 'in today's fast-paced world'",
+          "files": ["src/app/page.tsx:15", "src/components/Hero.tsx:4"]
+        }
+      ]
+    },
+    {
+      "id": "hero-syndrome",
+      "name": "Hero Syndrome",
+      "score": 0.9,
+      "status": "scored",
+      "evidence": [
+        {
+          "summary": "Generic hero template: h1 + paragraph + CTA button, content is non-specific",
+          "files": ["src/components/Hero.tsx:1"]
+        }
+      ]
+    }
   ],
-  "recommendations": { "deepScanSuggested": true, "reason": "Slop Score exceeds 75 with multiple Tier 2 signals firing. Deep scan can evaluate whether content is truly generic." }
+  "recommendations": {
+    "deepScanSuggested": true,
+    "reason": "Slop Score exceeds 75 with multiple Tier 2 signals firing. Deep scan can evaluate whether content is truly generic."
+  }
 }
 ```
 
@@ -267,13 +358,32 @@ Consider --deep for content and structure analysis.
 ### Example 2: Medium Slop (Moderate)
 
 **Scanner JSON (abbreviated):**
+
 ```json
 {
   "overall": { "slopScore": 45, "band": "Moderate", "confidence": "High" },
-  "intent": { "score": 34, "tier": "Partial", "evidence": [
-    { "type": "tailwind-theme", "count": 8, "description": "8 custom theme entries in tailwind.config.js" },
-    { "type": "css-vars", "count": 5, "description": "5 CSS custom properties in global scope" }
-  ], "attenuations": { "font-crime": 0.7, "purple-plague": 0.6, "border-radius-maximum": 0.8, "shadow-realm": 0.9 } },
+  "intent": {
+    "score": 34,
+    "tier": "Partial",
+    "evidence": [
+      {
+        "type": "tailwind-theme",
+        "count": 8,
+        "description": "8 custom theme entries in tailwind.config.js"
+      },
+      {
+        "type": "css-vars",
+        "count": 5,
+        "description": "5 CSS custom properties in global scope"
+      }
+    ],
+    "attenuations": {
+      "font-crime": 0.7,
+      "purple-plague": 0.6,
+      "border-radius-maximum": 0.8,
+      "shadow-realm": 0.9
+    }
+  },
   "scope": { "filesScanned": 67 },
   "categories": [
     { "id": "typography-color", "name": "Typography & Color", "score": 0.42 },
@@ -282,12 +392,49 @@ Consider --deep for content and structure analysis.
     { "id": "structure", "name": "Structure", "score": 0.44 }
   ],
   "signals": [
-    { "id": "font-crime", "name": "Font Crime", "score": 0.49, "rawScore": 0.70, "attenuatedScore": 0.49, "status": "scored",
-      "evidence": [{ "summary": "1 font family ('Inter') across 42 components; some custom theme entries detected", "files": ["src/app/layout.tsx:3"] }] },
-    { "id": "whitespace-wasteland", "name": "Whitespace Wasteland", "score": 0.55, "status": "scored",
-      "evidence": [{ "summary": "Spacing entropy 1.8 (moderate); 5 unique values in 312 declarations", "files": ["project-wide"] }] },
-    { "id": "shadow-realm", "name": "Shadow Realm", "score": 0.45, "rawScore": 0.50, "attenuatedScore": 0.45, "status": "scored",
-      "evidence": [{ "summary": "Shadows on 52% of components (35/67)", "files": ["src/components/Card.tsx:12", "src/components/Feature.tsx:8"] }] }
+    {
+      "id": "font-crime",
+      "name": "Font Crime",
+      "score": 0.49,
+      "rawScore": 0.7,
+      "attenuatedScore": 0.49,
+      "status": "scored",
+      "evidence": [
+        {
+          "summary": "1 font family ('Inter') across 42 components; some custom theme entries detected",
+          "files": ["src/app/layout.tsx:3"]
+        }
+      ]
+    },
+    {
+      "id": "whitespace-wasteland",
+      "name": "Whitespace Wasteland",
+      "score": 0.55,
+      "status": "scored",
+      "evidence": [
+        {
+          "summary": "Spacing entropy 1.8 (moderate); 5 unique values in 312 declarations",
+          "files": ["project-wide"]
+        }
+      ]
+    },
+    {
+      "id": "shadow-realm",
+      "name": "Shadow Realm",
+      "score": 0.45,
+      "rawScore": 0.5,
+      "attenuatedScore": 0.45,
+      "status": "scored",
+      "evidence": [
+        {
+          "summary": "Shadows on 52% of components (35/67)",
+          "files": [
+            "src/components/Card.tsx:12",
+            "src/components/Feature.tsx:8"
+          ]
+        }
+      ]
+    }
   ],
   "recommendations": { "deepScanSuggested": false, "reason": "" }
 }
@@ -322,27 +469,76 @@ Run with --verbose for full details.
 ### Example 3: Low Slop (Low)
 
 **Scanner JSON (abbreviated):**
+
 ```json
 {
   "overall": { "slopScore": 15, "band": "Low", "confidence": "High" },
-  "intent": { "score": 72, "tier": "Full", "evidence": [
-    { "type": "tailwind-theme", "count": 22, "description": "22 custom theme entries in tailwind.config.ts" },
-    { "type": "css-vars", "count": 18, "description": "18 CSS custom properties in global scope" },
-    { "type": "design-token-file", "count": 2, "description": "Design token files detected: tokens/colors.ts, tokens/spacing.ts" },
-    { "type": "naming-convention", "count": 1, "description": "Consistent --color-*, --space-* naming pattern" }
-  ], "attenuations": { "font-crime": 0.4, "purple-plague": 0.3, "border-radius-maximum": 0.5, "shadow-realm": 0.7 } },
+  "intent": {
+    "score": 72,
+    "tier": "Full",
+    "evidence": [
+      {
+        "type": "tailwind-theme",
+        "count": 22,
+        "description": "22 custom theme entries in tailwind.config.ts"
+      },
+      {
+        "type": "css-vars",
+        "count": 18,
+        "description": "18 CSS custom properties in global scope"
+      },
+      {
+        "type": "design-token-file",
+        "count": 2,
+        "description": "Design token files detected: tokens/colors.ts, tokens/spacing.ts"
+      },
+      {
+        "type": "naming-convention",
+        "count": 1,
+        "description": "Consistent --color-*, --space-* naming pattern"
+      }
+    ],
+    "attenuations": {
+      "font-crime": 0.4,
+      "purple-plague": 0.3,
+      "border-radius-maximum": 0.5,
+      "shadow-realm": 0.7
+    }
+  },
   "scope": { "filesScanned": 98 },
   "categories": [
     { "id": "typography-color", "name": "Typography & Color", "score": 0.12 },
     { "id": "spacing-effects", "name": "Spacing & Effects", "score": 0.18 },
     { "id": "content", "name": "Content", "score": 0.14 },
-    { "id": "structure", "name": "Structure", "score": 0.10 }
+    { "id": "structure", "name": "Structure", "score": 0.1 }
   ],
   "signals": [
-    { "id": "font-crime", "name": "Font Crime", "score": 0.20, "rawScore": 0.50, "attenuatedScore": 0.20, "status": "scored",
-      "evidence": [{ "summary": "2 font families ('Inter', 'Playfair Display') across 52 components", "files": ["src/app/layout.tsx:3"] }] },
-    { "id": "whitespace-wasteland", "name": "Whitespace Wasteland", "score": 0.22, "status": "scored",
-      "evidence": [{ "summary": "Spacing entropy 2.8 (healthy); 11 unique values in 445 declarations", "files": ["project-wide"] }] }
+    {
+      "id": "font-crime",
+      "name": "Font Crime",
+      "score": 0.2,
+      "rawScore": 0.5,
+      "attenuatedScore": 0.2,
+      "status": "scored",
+      "evidence": [
+        {
+          "summary": "2 font families ('Inter', 'Playfair Display') across 52 components",
+          "files": ["src/app/layout.tsx:3"]
+        }
+      ]
+    },
+    {
+      "id": "whitespace-wasteland",
+      "name": "Whitespace Wasteland",
+      "score": 0.22,
+      "status": "scored",
+      "evidence": [
+        {
+          "summary": "Spacing entropy 2.8 (healthy); 11 unique values in 445 declarations",
+          "files": ["project-wide"]
+        }
+      ]
+    }
   ],
   "recommendations": { "deepScanSuggested": false, "reason": "" }
 }
@@ -369,15 +565,42 @@ No significant slop patterns detected.
 ### Example 4: Design System with Moderate Slop (Intentional but Repetitive)
 
 **Scanner JSON (abbreviated):**
+
 ```json
 {
   "overall": { "slopScore": 35, "band": "Moderate", "confidence": "Medium" },
-  "intent": { "score": 68, "tier": "Full", "evidence": [
-    { "type": "tailwind-theme", "count": 18, "description": "18 custom theme entries in tailwind.config.ts" },
-    { "type": "css-vars", "count": 30, "description": "30 CSS custom properties in global scope" },
-    { "type": "design-token-file", "count": 1, "description": "Design token file detected: theme.ts" },
-    { "type": "style-guide", "count": 1, "description": "STYLE_GUIDE.md detected" }
-  ], "attenuations": { "font-crime": 0.4, "purple-plague": 0.3, "border-radius-maximum": 0.5, "shadow-realm": 0.7 } },
+  "intent": {
+    "score": 68,
+    "tier": "Full",
+    "evidence": [
+      {
+        "type": "tailwind-theme",
+        "count": 18,
+        "description": "18 custom theme entries in tailwind.config.ts"
+      },
+      {
+        "type": "css-vars",
+        "count": 30,
+        "description": "30 CSS custom properties in global scope"
+      },
+      {
+        "type": "design-token-file",
+        "count": 1,
+        "description": "Design token file detected: theme.ts"
+      },
+      {
+        "type": "style-guide",
+        "count": 1,
+        "description": "STYLE_GUIDE.md detected"
+      }
+    ],
+    "attenuations": {
+      "font-crime": 0.4,
+      "purple-plague": 0.3,
+      "border-radius-maximum": 0.5,
+      "shadow-realm": 0.7
+    }
+  },
   "scope": { "filesScanned": 112 },
   "categories": [
     { "id": "typography-color", "name": "Typography & Color", "score": 0.15 },
@@ -386,14 +609,51 @@ No significant slop patterns detected.
     { "id": "structure", "name": "Structure", "score": 0.55 }
   ],
   "signals": [
-    { "id": "whitespace-wasteland", "name": "Whitespace Wasteland", "score": 0.52, "status": "scored",
-      "evidence": [{ "summary": "Spacing entropy 1.4 (low); 4 unique values in 520 declarations", "files": ["project-wide"] }] },
-    { "id": "cookie-cutter-layout", "name": "Cookie Cutter Layout", "score": 0.61, "status": "scored",
-      "evidence": [{ "summary": "5 of 8 pages share identical section fingerprint: hero -> feature-grid -> testimonial -> cta-block -> footer", "files": ["src/app/page.tsx", "src/app/pricing/page.tsx", "src/app/about/page.tsx"] }] },
-    { "id": "cta-mania", "name": "CTA Mania", "score": 0.48, "status": "scored",
-      "evidence": [{ "summary": "6 CTA buttons on pricing page, 5 on landing page", "files": ["src/app/pricing/page.tsx:24", "src/app/page.tsx:18"] }] }
+    {
+      "id": "whitespace-wasteland",
+      "name": "Whitespace Wasteland",
+      "score": 0.52,
+      "status": "scored",
+      "evidence": [
+        {
+          "summary": "Spacing entropy 1.4 (low); 4 unique values in 520 declarations",
+          "files": ["project-wide"]
+        }
+      ]
+    },
+    {
+      "id": "cookie-cutter-layout",
+      "name": "Cookie Cutter Layout",
+      "score": 0.61,
+      "status": "scored",
+      "evidence": [
+        {
+          "summary": "5 of 8 pages share identical section fingerprint: hero -> feature-grid -> testimonial -> cta-block -> footer",
+          "files": [
+            "src/app/page.tsx",
+            "src/app/pricing/page.tsx",
+            "src/app/about/page.tsx"
+          ]
+        }
+      ]
+    },
+    {
+      "id": "cta-mania",
+      "name": "CTA Mania",
+      "score": 0.48,
+      "status": "scored",
+      "evidence": [
+        {
+          "summary": "6 CTA buttons on pricing page, 5 on landing page",
+          "files": ["src/app/pricing/page.tsx:24", "src/app/page.tsx:18"]
+        }
+      ]
+    }
   ],
-  "recommendations": { "deepScanSuggested": true, "reason": "Design system detected but structural repetition is high. Deep scan can evaluate whether layout similarity is intentional consistency or copy-paste." }
+  "recommendations": {
+    "deepScanSuggested": true,
+    "reason": "Design system detected but structural repetition is high. Deep scan can evaluate whether layout similarity is intentional consistency or copy-paste."
+  }
 }
 ```
 
@@ -427,35 +687,35 @@ Consider --deep for content and structure analysis.
 
 ### Signal Names and Categories
 
-| Signal ID | Name | Category |
-|-----------|------|----------|
-| `font-crime` | Font Crime | Typography & Color |
-| `purple-plague` | Purple Plague | Typography & Color |
-| `whitespace-wasteland` | Whitespace Wasteland | Spacing & Effects |
-| `shadow-realm` | Shadow Realm | Spacing & Effects |
-| `border-radius-maximum` | Border Radius Maximum | Spacing & Effects |
-| `gradient-overload` | Gradient Overload | Spacing & Effects |
-| `buzzword-bingo` | Buzzword Bingo | Content |
-| `hero-syndrome` | Hero Syndrome | Content |
-| `cookie-cutter-layout` | Cookie Cutter Layout | Structure |
-| `cta-mania` | CTA Mania | Structure |
+| Signal ID               | Name                  | Category           |
+| ----------------------- | --------------------- | ------------------ |
+| `font-crime`            | Font Crime            | Typography & Color |
+| `purple-plague`         | Purple Plague         | Typography & Color |
+| `whitespace-wasteland`  | Whitespace Wasteland  | Spacing & Effects  |
+| `shadow-realm`          | Shadow Realm          | Spacing & Effects  |
+| `border-radius-maximum` | Border Radius Maximum | Spacing & Effects  |
+| `gradient-overload`     | Gradient Overload     | Spacing & Effects  |
+| `buzzword-bingo`        | Buzzword Bingo        | Content            |
+| `hero-syndrome`         | Hero Syndrome         | Content            |
+| `cookie-cutter-layout`  | Cookie Cutter Layout  | Structure          |
+| `cta-mania`             | CTA Mania             | Structure          |
 
 ### Score Bands
 
-| Score | Band |
-|-------|------|
-| 0-25 | Low |
-| 26-50 | Moderate |
-| 51-75 | High |
-| 76-100 | Severe |
+| Score  | Band     |
+| ------ | -------- |
+| 0-25   | Low      |
+| 26-50  | Moderate |
+| 51-75  | High     |
+| 76-100 | Severe   |
 
 ### Intent Tiers
 
-| Intent Score | Tier |
-|-------------|------|
-| 0-20 | None |
-| 21-55 | Partial |
-| 56-100 | Full |
+| Intent Score | Tier    |
+| ------------ | ------- |
+| 0-20         | None    |
+| 21-55        | Partial |
+| 56-100       | Full    |
 
 ### Default Warn/Error Thresholds
 

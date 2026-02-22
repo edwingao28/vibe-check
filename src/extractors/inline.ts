@@ -96,7 +96,41 @@ const TEXT_ELEMENTS: Record<string, TextFact["context"]> = {
   p: "paragraph",
   button: "button",
   a: "link",
+  span: "other",
+  label: "other",
 };
+
+/** P3: Known component names that carry text content (PascalCase) */
+const SEMANTIC_COMPONENTS: Record<string, TextFact["context"]> = {
+  Button: "button",
+  Link: "link",
+  NavLink: "link",
+  RouterLink: "link",
+  CardTitle: "heading",
+  CardDescription: "paragraph",
+  DialogTitle: "heading",
+  DialogDescription: "paragraph",
+  AlertTitle: "heading",
+  AlertDescription: "paragraph",
+  Title: "heading",
+  Heading: "heading",
+  Text: "paragraph",
+  Badge: "other",
+  Label: "other",
+};
+
+/** P0: JSX attribute names that commonly carry text content */
+const TEXT_PROP_NAMES = new Set([
+  "title",
+  "description",
+  "label",
+  "placeholder",
+  "alt",
+  "aria-label",
+  "heading",
+  "subtitle",
+  "caption",
+]);
 
 /** Section type classification keywords mapped to StructuralFact sectionType */
 const SECTION_KEYWORDS: Array<[RegExp, StructuralFact["sectionType"]]> = [
@@ -197,11 +231,31 @@ function getClassName(opening: JSXElement["openingElement"]): string | null {
 }
 
 /**
- * Classify a section type based on a tag name and className.
+ * Extract the id string value from a JSXElement's attributes.
+ */
+function getId(opening: JSXElement["openingElement"]): string | null {
+  for (const attr of opening.attributes) {
+    if (
+      attr.type === "JSXAttribute" &&
+      attr.name.type === "JSXIdentifier" &&
+      attr.name.name === "id" &&
+      attr.value
+    ) {
+      if (attr.value.type === "StringLiteral") {
+        return attr.value.value;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Classify a section type based on a tag name, className, and id.
  */
 function classifySectionType(
   tagName: string,
-  className: string | null
+  className: string | null,
+  id: string | null,
 ): StructuralFact["sectionType"] {
   // Check tag/component name first
   for (const [pattern, sectionType] of SECTION_KEYWORDS) {
@@ -211,6 +265,12 @@ function classifySectionType(
   if (className) {
     for (const [pattern, sectionType] of SECTION_KEYWORDS) {
       if (pattern.test(className)) return sectionType;
+    }
+  }
+  // Check id attribute
+  if (id) {
+    for (const [pattern, sectionType] of SECTION_KEYWORDS) {
+      if (pattern.test(id)) return sectionType;
     }
   }
   return "unknown";
@@ -323,9 +383,12 @@ export function parseInlineStyles(
       const textContext = TEXT_ELEMENTS[tagName];
       if (textContext) {
         const text = extractTextFromChildren(path.node.children);
-        if (text) {
+        const hasChildren = path.node.children.length > 0;
+        // Emit TextFact even for dynamic children (e.g., <h3>{title}</h3>)
+        // so structural signals like Card Carnival can detect the pattern
+        if (text || hasChildren) {
           texts.push({
-            text,
+            text: text || "(dynamic)",
             context: textContext,
             file,
             line,
@@ -334,14 +397,98 @@ export function parseInlineStyles(
         }
       }
 
+      // --- P0: Extract text from JSX attributes (title=, description=, etc.) ---
+      for (const attr of opening.attributes) {
+        if (
+          attr.type === "JSXAttribute" &&
+          attr.name.type === "JSXIdentifier" &&
+          TEXT_PROP_NAMES.has(attr.name.name) &&
+          attr.value
+        ) {
+          let propText: string | null = null;
+          if (attr.value.type === "StringLiteral") {
+            propText = attr.value.value;
+          } else if (
+            attr.value.type === "JSXExpressionContainer" &&
+            attr.value.expression.type === "StringLiteral"
+          ) {
+            propText = attr.value.expression.value;
+          }
+          if (propText && propText.trim()) {
+            texts.push({
+              text: propText.trim(),
+              context: "other",
+              file,
+              line,
+              component,
+            });
+          }
+        }
+      }
+
+      // --- P3: Extract text from known semantic components ---
+      const componentContext = SEMANTIC_COMPONENTS[tagName];
+      if (componentContext) {
+        const text = extractTextFromChildren(path.node.children);
+        if (text) {
+          texts.push({
+            text,
+            context: componentContext,
+            file,
+            line,
+            component,
+          });
+        }
+      }
+
+      // --- Image src extraction (for Stock Photo Syndrome) ---
+      if (tagName === "img" || tagName === "Image" || tagName === "Img") {
+        for (const attr of opening.attributes) {
+          if (
+            attr.type === "JSXAttribute" &&
+            attr.name.type === "JSXIdentifier" &&
+            attr.name.name === "src" &&
+            attr.value
+          ) {
+            let srcValue: string | null = null;
+            if (attr.value.type === "StringLiteral") {
+              srcValue = attr.value.value;
+            } else if (
+              attr.value.type === "JSXExpressionContainer" &&
+              attr.value.expression.type === "StringLiteral"
+            ) {
+              srcValue = attr.value.expression.value;
+            }
+            if (srcValue && srcValue.trim()) {
+              texts.push({
+                text: srcValue.trim(),
+                context: "other",
+                file,
+                line,
+                component,
+              });
+            }
+          }
+        }
+      }
+
       // --- StructuralFact extraction ---
-      // Emit for <section>, <main>, or PascalCase components (custom components)
-      const isSection = tagName === "section" || tagName === "main";
+      // P2: Emit for <section>, <main>, <header>, <nav>, <footer>, <aside>, or PascalCase components
+      const isSection = tagName === "section" || tagName === "main" ||
+        tagName === "header" || tagName === "nav" ||
+        tagName === "footer" || tagName === "aside";
       const isCustomComponent = /^[A-Z]/.test(tagName);
 
-      if (isSection || isCustomComponent) {
-        const className = getClassName(opening);
-        let sectionType = classifySectionType(tagName, className);
+      // P1: Also check divs whose className or id matches a section keyword
+      const className = getClassName(opening);
+      const elId = getId(opening);
+      const divMatchesKeyword = tagName === "div" && (
+        (className != null && SECTION_KEYWORDS.some(([pattern]) => pattern.test(className))) ||
+        (elId != null && SECTION_KEYWORDS.some(([pattern]) => pattern.test(elId)))
+      );
+
+      if (isSection || isCustomComponent || divMatchesKeyword) {
+        let sectionType = classifySectionType(tagName, className, elId);
 
         // Content heuristic: if still "unknown" and has exactly
         // 1 heading + 1 paragraph + 1 button → classify as "hero"
@@ -349,8 +496,8 @@ export function parseInlineStyles(
           sectionType = "hero";
         }
 
-        // Only emit for actual section/main elements or when classification is not unknown
-        if (isSection || sectionType !== "unknown") {
+        // Emit for semantic elements, keyword-matched divs, or classified components
+        if (isSection || divMatchesKeyword || sectionType !== "unknown") {
           structures.push({
             sectionType,
             file,

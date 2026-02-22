@@ -63,28 +63,100 @@ export function resolveScope(
 }
 
 /**
+ * Common frontend source container directories, checked in priority order.
+ *
+ * These are directories that wrap the ENTIRE frontend source tree.
+ * Individual UI directories (app/, components/, pages/) are NOT listed here —
+ * they're handled by the UI_DIRECTORIES fallback.
+ */
+const FRONTEND_ROOTS: string[] = [
+  // Standard single-app layouts
+  "src",
+  // Full-stack apps (Express/Hono/Fastify + React/Vue)
+  "client/src",
+  "client",
+  "frontend/src",
+  "frontend",
+  "web/src",
+  "web",
+  // Monorepo patterns (Turborepo, Nx, etc.)
+  "apps/web/src",
+  "apps/web",
+  "apps/frontend/src",
+  "apps/frontend",
+  "apps/client/src",
+  "apps/client",
+  "packages/ui/src",
+  "packages/ui",
+];
+
+/**
+ * Check if a directory contains at least one scannable UI file.
+ */
+function hasScannableFiles(dirPath: string): boolean {
+  if (!existsSync(dirPath) || !isDirectory(dirPath)) return false;
+
+  let entries: Dirent[];
+  try {
+    entries = readdirSync(dirPath, { withFileTypes: true }) as Dirent[];
+  } catch {
+    return false;
+  }
+
+  for (const entry of entries) {
+    if (entry.isFile()) {
+      const ext = extname(entry.name as string);
+      if (SCANNABLE_EXTENSIONS.includes(ext)) return true;
+    }
+    if (entry.isDirectory()) {
+      // Check one level of subdirectories for UI files
+      const subPath = join(dirPath, entry.name as string);
+      let subEntries: Dirent[];
+      try {
+        subEntries = readdirSync(subPath, { withFileTypes: true }) as Dirent[];
+      } catch {
+        continue;
+      }
+      for (const sub of subEntries) {
+        if (sub.isFile()) {
+          const ext = extname(sub.name as string);
+          if (SCANNABLE_EXTENSIONS.includes(ext)) return true;
+        }
+      }
+    }
+  }
+  return false;
+}
+
+/**
  * Smart UI scope detection.
- * If src/ exists, scan src/. Otherwise scan project root limited to UI_DIRECTORIES.
+ *
+ * Checks common frontend directory patterns in priority order:
+ * 1. FRONTEND_ROOTS — common source locations (src/, client/src/, apps/web/, etc.)
+ * 2. UI_DIRECTORIES — fallback for non-standard layouts
+ * 3. Root-level files — catch-all for flat projects
  */
 function resolveSmartScope(
   projectRoot: string,
   excludePatterns: string[],
 ): ScopeResult {
-  const srcPath = join(projectRoot, "src");
-
-  if (existsSync(srcPath) && isDirectory(srcPath)) {
-    // src/ exists — scan it
-    const files = collectFiles(srcPath, projectRoot, excludePatterns);
-
-    return {
-      method: "smart-ui",
-      resolvedPath: "src",
-      files,
-      excludesApplied: excludePatterns,
-    };
+  // 1. Check FRONTEND_ROOTS in priority order
+  for (const frontendRoot of FRONTEND_ROOTS) {
+    const candidatePath = join(projectRoot, frontendRoot);
+    if (existsSync(candidatePath) && isDirectory(candidatePath) && hasScannableFiles(candidatePath)) {
+      const files = collectFiles(candidatePath, projectRoot, excludePatterns);
+      if (files.length > 0) {
+        return {
+          method: "smart-ui",
+          resolvedPath: frontendRoot,
+          files,
+          excludesApplied: excludePatterns,
+        };
+      }
+    }
   }
 
-  // No src/ — scan project root limited to UI_DIRECTORIES
+  // 2. Fallback: scan project root limited to UI_DIRECTORIES
   const files: string[] = [];
 
   for (const dir of UI_DIRECTORIES) {
@@ -99,7 +171,7 @@ function resolveSmartScope(
   const rootFiles = collectRootFiles(projectRoot, excludePatterns);
   files.push(...rootFiles);
 
-  // Deduplicate (UI_DIRECTORIES may overlap, e.g., "src/app" and "src/components" both under "src")
+  // Deduplicate (UI_DIRECTORIES may overlap)
   const uniqueFiles = [...new Set(files)];
 
   return {

@@ -292,7 +292,7 @@ describe("TextFact extraction", () => {
     expect(result.texts).toHaveLength(0);
   });
 
-  it("does not emit TextFact for elements with no static text", () => {
+  it("emits TextFact with '(dynamic)' for elements with dynamic-only children", () => {
     const content = `
       export function Page() {
         const title = "Dynamic";
@@ -301,8 +301,10 @@ describe("TextFact extraction", () => {
     `;
     const result = parseInlineStyles(content, "Page.tsx");
 
-    // h1 has only a dynamic expression, no static text to extract
-    expect(result.texts).toHaveLength(0);
+    // h1 has dynamic children — still emits a TextFact for structural detection
+    expect(result.texts).toHaveLength(1);
+    expect(result.texts[0].text).toBe("(dynamic)");
+    expect(result.texts[0].context).toBe("heading");
   });
 
   it("extracts text from nested children", () => {
@@ -498,7 +500,7 @@ describe("StructuralFact extraction", () => {
     expect(hero).toBeUndefined();
   });
 
-  it("does not emit StructuralFact for div elements", () => {
+  it("emits StructuralFact for div elements whose className matches a section keyword", () => {
     const content = `
       export function Page() {
         return (
@@ -510,7 +512,24 @@ describe("StructuralFact extraction", () => {
     `;
     const result = parseInlineStyles(content, "Page.tsx");
 
-    // div is not section/main/component, so no structural fact
+    // P1: divs with className matching a section keyword now emit StructuralFact
+    expect(result.structures).toHaveLength(1);
+    expect(result.structures[0].sectionType).toBe("hero");
+  });
+
+  it("does not emit StructuralFact for div elements without a keyword className", () => {
+    const content = `
+      export function Page() {
+        return (
+          <div className="container">
+            <h1>Title</h1>
+          </div>
+        );
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    // div with a non-keyword className should not emit a structural fact
     expect(result.structures).toHaveLength(0);
   });
 
