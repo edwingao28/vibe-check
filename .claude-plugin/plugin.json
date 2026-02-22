@@ -1,7 +1,12 @@
 {
   "name": "vibe-check",
-  "description": "Detects AI-generated slop in web projects",
+  "description": "Detects AI-generated slop in web projects — scans CSS, Tailwind, and JSX for 14 signals of AI-generated design patterns",
+  "version": "0.1.0",
   "author": {
-    "name": "vibe-check"
-  }
+    "name": "Wenyao Gao"
+  },
+  "homepage": "https://github.com/edwingao28/vibe-check",
+  "repository": "https://github.com/edwingao28/vibe-check",
+  "license": "MIT",
+  "keywords": ["slop", "ai-detection", "design", "css", "vibe-check"]
 }

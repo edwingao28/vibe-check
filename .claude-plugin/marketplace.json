@@ -1,0 +1,17 @@
+{
+"name": "vibe-check-marketplace",
+"owner": {
+    "name": "Wenyao Gao",
+    "email": "edwin.gao28@gmail.com"
+},
+"metadata": {
+    "description": "AI slop detection tools for web projects"
+},
+"plugins": [
+    {
+    "name": "vibe-check",
+    "source": "./",
+    "description": "Detects AI-generated slop in web projects"
+    }
+]
+}
