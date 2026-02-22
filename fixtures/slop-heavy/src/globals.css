@@ -1,0 +1,46 @@
+body {
+  font-family: 'Inter', sans-serif;
+  margin: 0;
+  padding: 0;
+  background-color: #f5f3ff;
+  color: #7C3AED;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Inter', sans-serif;
+  color: #7C3AED;
+}
+
+a {
+  color: #8B5CF6;
+}
+
+.highlight {
+  background-color: #A78BFA;
+  color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  padding: 2rem;
+}
+
+.hero-badge {
+  background: linear-gradient(135deg, #7C3AED, #8B5CF6);
+  color: white;
+  border-radius: 0.5rem;
+  box-shadow: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+  padding: 2rem;
+}
+
+.accent-bg {
+  background-color: #A78BFA;
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+  padding: 2rem;
+}
+
+.card-wrapper {
+  border-radius: 0.5rem;
+  box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.1);
+  padding: 2rem;
+  background-color: #8B5CF6;
+}

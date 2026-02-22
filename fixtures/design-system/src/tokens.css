@@ -1,0 +1,8 @@
+/* Design system token definitions - re-export for tooling */
+:root {
+  --ds-color-brand: #22c55e;
+  --ds-color-brand-light: #86efac;
+  --ds-color-brand-dark: #15803d;
+  --ds-spacing-unit: 0.25rem;
+  --ds-radius-default: 0.375rem;
+}
