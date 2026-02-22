@@ -184,10 +184,11 @@ describe("CTA Mania", () => {
   });
 
   describe("edge cases", () => {
-    it("returns score 0 with empty context", () => {
+    it("returns insufficient_data with empty context", () => {
       const ctx = makeContext({});
       const result = ctaMania.analyze(ctx);
       expect(result.score).toBe(0);
+      expect(result.status).toBe("insufficient_data");
       expect(result.confidence).toBe("low");
     });
 

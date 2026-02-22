@@ -128,7 +128,7 @@ export function generateReport(params: ReportParams): ScanReport {
     categories: scoringResult.categories.map((c) => ({
       id: c.id,
       name: c.name,
-      score: c.score,
+      score: Number.isNaN(c.score) ? null : c.score,
       signals: c.signals,
     })),
 

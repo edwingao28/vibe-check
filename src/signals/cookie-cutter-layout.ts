@@ -84,6 +84,21 @@ export const cookieCutterLayout: SignalDefinition = {
 
     const files = [...byFile.keys()];
 
+    // No structural data at all — can't analyze
+    if (structures.length === 0) {
+      return {
+        id: "cookie-cutter-layout",
+        name: "Cookie Cutter Layout",
+        category: "structure",
+        score: 0,
+        rawScore: 0,
+        attenuatedScore: 0,
+        status: "insufficient_data",
+        confidence: "low",
+        evidence: [],
+      };
+    }
+
     // Need at least 2 pages to compare
     if (files.length < 2) {
       return {
@@ -94,7 +109,7 @@ export const cookieCutterLayout: SignalDefinition = {
         rawScore: 0,
         attenuatedScore: 0,
         status: "scored",
-        confidence: structures.length > 0 ? "high" : "low",
+        confidence: "high",
         evidence: [],
       };
     }

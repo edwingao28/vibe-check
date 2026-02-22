@@ -134,7 +134,7 @@ export const buzzwordBingo: SignalDefinition = {
         score: 0,
         rawScore: 0,
         attenuatedScore: 0,
-        status: "scored",
+        status: "insufficient_data",
         confidence: "low",
         evidence: [],
       };

@@ -111,10 +111,11 @@ describe("Cookie Cutter Layout", () => {
       expect(result.score).toBe(0);
     });
 
-    it("scores 0 with no structural facts", () => {
+    it("returns insufficient_data with no structural facts", () => {
       const ctx = makeContext({});
       const result = cookieCutterLayout.analyze(ctx);
       expect(result.score).toBe(0);
+      expect(result.status).toBe("insufficient_data");
       expect(result.confidence).toBe("low");
     });
 

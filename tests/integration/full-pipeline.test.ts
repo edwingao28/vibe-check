@@ -152,7 +152,8 @@ function scanFixture(fixtureName: string): PipelineResult {
   const band = getBand(slopScore);
   const coverage = irStore.getCoverage();
   const extractorStatuses = irStore.getExtractorResults().map((r) => r.status);
-  const confidence = getConfidence(coverage.overallCoverage, extractorStatuses);
+  const excludedCategories = categories.filter((c) => Number.isNaN(c.score)).length;
+  const confidence = getConfidence(coverage.overallCoverage, extractorStatuses, excludedCategories);
 
   return {
     slopScore: Math.round(slopScore * 100) / 100,

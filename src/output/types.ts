@@ -45,7 +45,7 @@ export interface ScanReport {
   categories: Array<{
     id: CategoryId;
     name: string;
-    score: number;
+    score: number | null;
     signals: string[];
   }>;
   signals: Array<{

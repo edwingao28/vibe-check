@@ -150,6 +150,21 @@ export const heroSyndrome: SignalDefinition = {
   analyze(ctx: SignalContext): SignalResult {
     const { structures, texts } = ctx;
 
+    // No data at all — can't analyze
+    if (texts.length === 0 && structures.length === 0) {
+      return {
+        id: "hero-syndrome",
+        name: "Hero Syndrome",
+        category: "content",
+        score: 0,
+        rawScore: 0,
+        attenuatedScore: 0,
+        status: "insufficient_data",
+        confidence: "low",
+        evidence: [],
+      };
+    }
+
     // Determine which analysis path to use
     let analyses: HeroAnalysis[];
     if (structures.length > 0) {

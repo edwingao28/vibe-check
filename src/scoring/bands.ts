@@ -27,14 +27,23 @@ export function getBand(score: number): Band {
 export function getConfidence(
   overallCoverage: number,
   extractorStatuses: string[],
+  excludedCategories?: number,
 ): Confidence {
   const allHealthy = extractorStatuses.every((s) => s === "healthy");
 
+  let confidence: Confidence;
   if (overallCoverage > 0.9 && allHealthy) {
-    return "High";
+    confidence = "High";
+  } else if (overallCoverage >= 0.7) {
+    confidence = "Medium";
+  } else {
+    confidence = "Low";
   }
-  if (overallCoverage >= 0.7) {
-    return "Medium";
+
+  // If any categories were excluded due to insufficient data, cap at Medium
+  if (excludedCategories && excludedCategories > 0 && confidence === "High") {
+    confidence = "Medium";
   }
-  return "Low";
+
+  return confidence;
 }

@@ -78,4 +78,23 @@ describe("getConfidence", () => {
     // No extractors -> allHealthy is true (vacuous truth), but need > 0.9
     expect(getConfidence(0.95, [])).toBe("High");
   });
+
+  it("caps at 'Medium' when excludedCategories > 0 and would otherwise be 'High'", () => {
+    // Without excludedCategories, this would be "High"
+    expect(getConfidence(0.95, ["healthy", "healthy"], 0)).toBe("High");
+    expect(getConfidence(0.95, ["healthy", "healthy"], 1)).toBe("Medium");
+    expect(getConfidence(0.95, ["healthy", "healthy"], 2)).toBe("Medium");
+  });
+
+  it("does not change 'Medium' or 'Low' when excludedCategories > 0", () => {
+    // Already Medium — stays Medium
+    expect(getConfidence(0.85, ["healthy", "healthy"], 1)).toBe("Medium");
+    // Already Low — stays Low
+    expect(getConfidence(0.5, ["healthy", "healthy"], 1)).toBe("Low");
+  });
+
+  it("treats undefined excludedCategories as 0", () => {
+    expect(getConfidence(0.95, ["healthy"])).toBe("High");
+    expect(getConfidence(0.95, ["healthy"], undefined)).toBe("High");
+  });
 });

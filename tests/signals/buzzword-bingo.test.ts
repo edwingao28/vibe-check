@@ -160,10 +160,11 @@ describe("Buzzword Bingo", () => {
   });
 
   describe("edge cases", () => {
-    it("returns score 0 with empty text facts", () => {
+    it("returns insufficient_data with empty text facts", () => {
       const ctx = makeContext({});
       const result = buzzwordBingo.analyze(ctx);
       expect(result.score).toBe(0);
+      expect(result.status).toBe("insufficient_data");
       expect(result.confidence).toBe("low");
     });
 

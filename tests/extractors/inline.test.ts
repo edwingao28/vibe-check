@@ -173,6 +173,427 @@ describe("parseInlineStyles with simple JSX", () => {
   });
 });
 
+describe("TextFact extraction", () => {
+  it("extracts heading text from <h1>", () => {
+    const content = `
+      export function Page() {
+        return <h1>Welcome</h1>;
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    const heading = result.texts.find(
+      (t) => t.context === "heading" && t.text === "Welcome"
+    );
+    expect(heading).toBeDefined();
+    expect(heading!.file).toBe("Page.tsx");
+  });
+
+  it("extracts heading text from h2-h6", () => {
+    const content = `
+      export function Page() {
+        return (
+          <div>
+            <h2>Subtitle</h2>
+            <h3>Section Title</h3>
+            <h6>Smallest Heading</h6>
+          </div>
+        );
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    const headings = result.texts.filter((t) => t.context === "heading");
+    expect(headings.length).toBe(3);
+    expect(headings.some((h) => h.text === "Subtitle")).toBe(true);
+    expect(headings.some((h) => h.text === "Section Title")).toBe(true);
+    expect(headings.some((h) => h.text === "Smallest Heading")).toBe(true);
+  });
+
+  it("extracts paragraph text from <p>", () => {
+    const content = `
+      export function Page() {
+        return <p>Some text</p>;
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    const para = result.texts.find(
+      (t) => t.context === "paragraph" && t.text === "Some text"
+    );
+    expect(para).toBeDefined();
+  });
+
+  it("extracts button text from <button>", () => {
+    const content = `
+      export function Page() {
+        return <button>Click me</button>;
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    const btn = result.texts.find(
+      (t) => t.context === "button" && t.text === "Click me"
+    );
+    expect(btn).toBeDefined();
+  });
+
+  it("extracts link text from <a>", () => {
+    const content = `
+      export function Page() {
+        return <a href="#">Learn more</a>;
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    const link = result.texts.find(
+      (t) => t.context === "link" && t.text === "Learn more"
+    );
+    expect(link).toBeDefined();
+  });
+
+  it("concatenates mixed static text children, skipping dynamic expressions", () => {
+    const content = `
+      export function Page() {
+        const name = "World";
+        return <h1>Hello {name}</h1>;
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    const heading = result.texts.find((t) => t.context === "heading");
+    expect(heading).toBeDefined();
+    expect(heading!.text).toBe("Hello");
+  });
+
+  it("extracts string literals inside JSXExpressionContainer", () => {
+    const content = `
+      export function Page() {
+        return <p>Static text {"and more"}</p>;
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    const para = result.texts.find((t) => t.context === "paragraph");
+    expect(para).toBeDefined();
+    expect(para!.text).toBe("Static text and more");
+  });
+
+  it("does not extract text from non-semantic elements like div or span", () => {
+    const content = `
+      export function Page() {
+        return (
+          <div>Some text in div</div>
+        );
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    expect(result.texts).toHaveLength(0);
+  });
+
+  it("does not emit TextFact for elements with no static text", () => {
+    const content = `
+      export function Page() {
+        const title = "Dynamic";
+        return <h1>{title}</h1>;
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    // h1 has only a dynamic expression, no static text to extract
+    expect(result.texts).toHaveLength(0);
+  });
+
+  it("extracts text from nested children", () => {
+    const content = `
+      export function Page() {
+        return <button><span>Click</span> here</button>;
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    const btn = result.texts.find((t) => t.context === "button");
+    expect(btn).toBeDefined();
+    expect(btn!.text).toBe("Click here");
+  });
+});
+
+describe("StructuralFact extraction", () => {
+  it("classifies section with hero className", () => {
+    const content = `
+      export function Page() {
+        return (
+          <section className="hero">
+            <h1>Title</h1>
+          </section>
+        );
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    const hero = result.structures.find((s) => s.sectionType === "hero");
+    expect(hero).toBeDefined();
+    expect(hero!.file).toBe("Page.tsx");
+  });
+
+  it("classifies HeroSection component name as hero", () => {
+    const content = `
+      function HeroSection() {
+        return <div>Hero content</div>;
+      }
+      export function Page() {
+        return <HeroSection />;
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    const hero = result.structures.find((s) => s.sectionType === "hero");
+    expect(hero).toBeDefined();
+  });
+
+  it("classifies feature section by className", () => {
+    const content = `
+      export function Page() {
+        return (
+          <section className="feature-list">
+            <h2>Features</h2>
+          </section>
+        );
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    const feature = result.structures.find(
+      (s) => s.sectionType === "feature-grid"
+    );
+    expect(feature).toBeDefined();
+  });
+
+  it("classifies testimonial section by className", () => {
+    const content = `
+      export function Page() {
+        return (
+          <section className="testimonial-carousel">
+            <h3>Testimonials</h3>
+          </section>
+        );
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    const testimonial = result.structures.find(
+      (s) => s.sectionType === "testimonial-section"
+    );
+    expect(testimonial).toBeDefined();
+  });
+
+  it("classifies pricing section by className", () => {
+    const content = `
+      export function Page() {
+        return (
+          <section className="pricing-table">
+            <h2>Pricing</h2>
+          </section>
+        );
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    const pricing = result.structures.find(
+      (s) => s.sectionType === "pricing"
+    );
+    expect(pricing).toBeDefined();
+  });
+
+  it("classifies cta section by className", () => {
+    const content = `
+      export function Page() {
+        return (
+          <main className="cta-section">
+            <h2>Ready?</h2>
+          </main>
+        );
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    const cta = result.structures.find(
+      (s) => s.sectionType === "cta-block"
+    );
+    expect(cta).toBeDefined();
+  });
+
+  it("classifies footer section by className", () => {
+    const content = `
+      export function Page() {
+        return (
+          <section className="footer">
+            <p>Copyright</p>
+          </section>
+        );
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    const footer = result.structures.find(
+      (s) => s.sectionType === "footer"
+    );
+    expect(footer).toBeDefined();
+  });
+
+  it("classifies section without hints as unknown", () => {
+    const content = `
+      export function Page() {
+        return (
+          <section>
+            <div>Some content</div>
+          </section>
+        );
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    const unknown = result.structures.find(
+      (s) => s.sectionType === "unknown"
+    );
+    expect(unknown).toBeDefined();
+  });
+
+  it("applies hero heuristic: 1 heading + 1 paragraph + 1 button", () => {
+    const content = `
+      export function Page() {
+        return (
+          <section>
+            <h1>Big Title</h1>
+            <p>Subtitle paragraph</p>
+            <button>Sign Up</button>
+          </section>
+        );
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    const hero = result.structures.find((s) => s.sectionType === "hero");
+    expect(hero).toBeDefined();
+  });
+
+  it("does not apply hero heuristic when there are 2 headings", () => {
+    const content = `
+      export function Page() {
+        return (
+          <section>
+            <h1>Title 1</h1>
+            <h2>Title 2</h2>
+            <p>Paragraph</p>
+            <button>Click</button>
+          </section>
+        );
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    // Should be "unknown" since 2 headings doesn't match hero heuristic
+    const hero = result.structures.find((s) => s.sectionType === "hero");
+    expect(hero).toBeUndefined();
+  });
+
+  it("does not emit StructuralFact for div elements", () => {
+    const content = `
+      export function Page() {
+        return (
+          <div className="hero">
+            <h1>Title</h1>
+          </div>
+        );
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    // div is not section/main/component, so no structural fact
+    expect(result.structures).toHaveLength(0);
+  });
+
+  it("classifies component by name (e.g., FeatureGrid)", () => {
+    const content = `
+      function FeatureGrid() {
+        return <div>Features</div>;
+      }
+      export function Page() {
+        return <FeatureGrid />;
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    const feature = result.structures.find(
+      (s) => s.sectionType === "feature-grid"
+    );
+    expect(feature).toBeDefined();
+  });
+
+  it("classifies component by name with various keywords", () => {
+    const content = `
+      export function Page() {
+        return (
+          <div>
+            <StatsSection />
+            <FaqBlock />
+            <ContactForm />
+            <AboutUs />
+          </div>
+        );
+      }
+    `;
+    const result = parseInlineStyles(content, "Page.tsx");
+
+    expect(result.structures.some((s) => s.sectionType === "stats")).toBe(true);
+    expect(result.structures.some((s) => s.sectionType === "faq")).toBe(true);
+    expect(result.structures.some((s) => s.sectionType === "contact")).toBe(true);
+    expect(result.structures.some((s) => s.sectionType === "about")).toBe(true);
+  });
+});
+
+describe("TextFact and StructuralFact from fixture file", () => {
+  it("extracts text facts from the fixture", () => {
+    const content = readFileSync(join(FIXTURES, "inline-styles.tsx"), "utf-8");
+    const result = parseInlineStyles(content, "inline-styles.tsx");
+
+    // Should find headings from HeroSection, FeatureGrid, etc.
+    const headings = result.texts.filter((t) => t.context === "heading");
+    expect(headings.length).toBeGreaterThanOrEqual(4);
+    expect(headings.some((h) => h.text === "Welcome to Our Platform")).toBe(true);
+    expect(headings.some((h) => h.text === "Amazing Features")).toBe(true);
+
+    // Should find paragraphs
+    const paragraphs = result.texts.filter((t) => t.context === "paragraph");
+    expect(paragraphs.length).toBeGreaterThanOrEqual(2);
+    expect(paragraphs.some((p) => p.text === "The best solution for your needs.")).toBe(true);
+
+    // Should find buttons
+    const buttons = result.texts.filter((t) => t.context === "button");
+    expect(buttons.length).toBeGreaterThanOrEqual(2);
+    expect(buttons.some((b) => b.text === "Get Started")).toBe(true);
+
+    // Should find links
+    const links = result.texts.filter((t) => t.context === "link");
+    expect(links.length).toBeGreaterThanOrEqual(1);
+    expect(links.some((l) => l.text === "Learn more")).toBe(true);
+  });
+
+  it("extracts structural facts from the fixture", () => {
+    const content = readFileSync(join(FIXTURES, "inline-styles.tsx"), "utf-8");
+    const result = parseInlineStyles(content, "inline-styles.tsx");
+
+    // Should find hero, feature, pricing, testimonial, cta, footer sections
+    expect(result.structures.some((s) => s.sectionType === "hero")).toBe(true);
+    expect(result.structures.some((s) => s.sectionType === "feature-grid")).toBe(true);
+    expect(result.structures.some((s) => s.sectionType === "pricing")).toBe(true);
+    expect(result.structures.some((s) => s.sectionType === "testimonial-section")).toBe(true);
+    expect(result.structures.some((s) => s.sectionType === "cta-block")).toBe(true);
+    expect(result.structures.some((s) => s.sectionType === "footer")).toBe(true);
+  });
+});
+
 describe("extractInlineStyles", () => {
   it("processes files and reports health", () => {
     const files = [join(FIXTURES, "inline-styles.tsx")];
@@ -203,5 +624,13 @@ describe("extractInlineStyles", () => {
     expect(result.filesParsed).toBe(1);
     expect(result.errors).toHaveLength(1);
     expect(result.status).toBe("degraded");
+  });
+
+  it("wires text and structure facts through extractInlineStyles", () => {
+    const files = [join(FIXTURES, "inline-styles.tsx")];
+    const result = extractInlineStyles(files);
+
+    expect(result.texts.length).toBeGreaterThan(0);
+    expect(result.structures.length).toBeGreaterThan(0);
   });
 });

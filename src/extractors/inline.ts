@@ -9,8 +9,8 @@
 import { readFileSync } from "node:fs";
 import { parse as babelParse } from "@babel/parser";
 import _traverse from "@babel/traverse";
-import type { Node } from "@babel/types";
-import type { StyleFact, ColorFact, SuppressionFact } from "../ir/types.js";
+import type { Node, JSXElement, JSXFragment } from "@babel/types";
+import type { StyleFact, ColorFact, TextFact, StructuralFact, SuppressionFact } from "../ir/types.js";
 import type { ExtractorResult, ExtractorError } from "./types.js";
 import { resolveColor, isColorValue } from "./utils/color-resolver.js";
 import { parseSuppressions } from "./utils/suppression-parser.js";
@@ -85,6 +85,158 @@ function extractStaticValue(
   }
 }
 
+/** HTML elements that carry semantic text content */
+const TEXT_ELEMENTS: Record<string, TextFact["context"]> = {
+  h1: "heading",
+  h2: "heading",
+  h3: "heading",
+  h4: "heading",
+  h5: "heading",
+  h6: "heading",
+  p: "paragraph",
+  button: "button",
+  a: "link",
+};
+
+/** Section type classification keywords mapped to StructuralFact sectionType */
+const SECTION_KEYWORDS: Array<[RegExp, StructuralFact["sectionType"]]> = [
+  [/hero/i, "hero"],
+  [/feature/i, "feature-grid"],
+  [/testimonial/i, "testimonial-section"],
+  [/pricing/i, "pricing"],
+  [/cta|call-to-action|calltoaction/i, "cta-block"],
+  [/footer/i, "footer"],
+  [/stats/i, "stats"],
+  [/faq/i, "faq"],
+  [/contact/i, "contact"],
+  [/about/i, "about"],
+];
+
+/**
+ * Extract static text content from JSX children.
+ * Concatenates StringLiteral, JSXText, and JSXExpressionContainer(StringLiteral).
+ * Skips dynamic expressions (variables, function calls).
+ */
+function extractTextFromChildren(children: JSXElement["children"]): string {
+  const parts: string[] = [];
+  for (const child of children) {
+    switch (child.type) {
+      case "JSXText": {
+        const trimmed = child.value.replace(/\s+/g, " ").trim();
+        if (trimmed) parts.push(trimmed);
+        break;
+      }
+      case "JSXExpressionContainer": {
+        if (child.expression.type === "StringLiteral") {
+          if (child.expression.value.trim()) {
+            parts.push(child.expression.value.trim());
+          }
+        }
+        // Skip dynamic expressions (Identifier, CallExpression, etc.)
+        break;
+      }
+      // Recurse into nested JSX elements to capture their text too
+      case "JSXElement": {
+        const nestedText = extractTextFromChildren(child.children);
+        if (nestedText) parts.push(nestedText);
+        break;
+      }
+      case "JSXFragment": {
+        const fragText = extractTextFromChildren((child as JSXFragment).children);
+        if (fragText) parts.push(fragText);
+        break;
+      }
+    }
+  }
+  return parts.join(" ");
+}
+
+/**
+ * Get the tag name from a JSXElement's opening element.
+ * Returns the simple name for JSXIdentifier (e.g., "div", "h1", "HeroSection").
+ * Returns null for member expressions and namespaced names.
+ */
+function getTagName(opening: JSXElement["openingElement"]): string | null {
+  if (opening.name.type === "JSXIdentifier") {
+    return opening.name.name;
+  }
+  return null;
+}
+
+/**
+ * Extract the className string value from a JSXElement's attributes.
+ */
+function getClassName(opening: JSXElement["openingElement"]): string | null {
+  for (const attr of opening.attributes) {
+    if (
+      attr.type === "JSXAttribute" &&
+      attr.name.type === "JSXIdentifier" &&
+      attr.name.name === "className" &&
+      attr.value
+    ) {
+      if (attr.value.type === "StringLiteral") {
+        return attr.value.value;
+      }
+      if (
+        attr.value.type === "JSXExpressionContainer" &&
+        attr.value.expression.type === "StringLiteral"
+      ) {
+        return attr.value.expression.value;
+      }
+      if (
+        attr.value.type === "JSXExpressionContainer" &&
+        attr.value.expression.type === "TemplateLiteral" &&
+        attr.value.expression.expressions.length === 0 &&
+        attr.value.expression.quasis.length === 1
+      ) {
+        return attr.value.expression.quasis[0].value.cooked ?? attr.value.expression.quasis[0].value.raw;
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Classify a section type based on a tag name and className.
+ */
+function classifySectionType(
+  tagName: string,
+  className: string | null
+): StructuralFact["sectionType"] {
+  // Check tag/component name first
+  for (const [pattern, sectionType] of SECTION_KEYWORDS) {
+    if (pattern.test(tagName)) return sectionType;
+  }
+  // Check className
+  if (className) {
+    for (const [pattern, sectionType] of SECTION_KEYWORDS) {
+      if (pattern.test(className)) return sectionType;
+    }
+  }
+  return "unknown";
+}
+
+/**
+ * Check whether a JSXElement's direct JSX children match the
+ * hero heuristic: exactly 1 heading + 1 paragraph + 1 button.
+ */
+function matchesHeroHeuristic(children: JSXElement["children"]): boolean {
+  let headings = 0;
+  let paragraphs = 0;
+  let buttons = 0;
+
+  for (const child of children) {
+    if (child.type !== "JSXElement") continue;
+    const name = getTagName(child.openingElement);
+    if (!name) continue;
+    if (/^h[1-6]$/.test(name)) headings++;
+    else if (name === "p") paragraphs++;
+    else if (name === "button") buttons++;
+  }
+
+  return headings === 1 && paragraphs === 1 && buttons === 1;
+}
+
 /**
  * Parse a JSX/TSX file and extract inline style facts.
  */
@@ -94,10 +246,14 @@ export function parseInlineStyles(
 ): {
   facts: StyleFact[];
   colors: ColorFact[];
+  texts: TextFact[];
+  structures: StructuralFact[];
   suppressions: SuppressionFact[];
 } {
   const facts: StyleFact[] = [];
   const colors: ColorFact[] = [];
+  const texts: TextFact[] = [];
+  const structures: StructuralFact[] = [];
   const component = detectComponent(file);
 
   // Parse suppressions from raw source
@@ -123,7 +279,7 @@ export function parseInlineStyles(
     });
   } catch {
     // If parsing fails completely, return empty results
-    return { facts, colors, suppressions };
+    return { facts, colors, texts, structures, suppressions };
   }
 
   traverse(ast, {
@@ -155,9 +311,58 @@ export function parseInlineStyles(
         }
       }
     },
+
+    JSXElement(path) {
+      const opening = path.node.openingElement;
+      const tagName = getTagName(opening);
+      if (!tagName) return;
+
+      const line = opening.loc?.start.line ?? 0;
+
+      // --- TextFact extraction ---
+      const textContext = TEXT_ELEMENTS[tagName];
+      if (textContext) {
+        const text = extractTextFromChildren(path.node.children);
+        if (text) {
+          texts.push({
+            text,
+            context: textContext,
+            file,
+            line,
+            component,
+          });
+        }
+      }
+
+      // --- StructuralFact extraction ---
+      // Emit for <section>, <main>, or PascalCase components (custom components)
+      const isSection = tagName === "section" || tagName === "main";
+      const isCustomComponent = /^[A-Z]/.test(tagName);
+
+      if (isSection || isCustomComponent) {
+        const className = getClassName(opening);
+        let sectionType = classifySectionType(tagName, className);
+
+        // Content heuristic: if still "unknown" and has exactly
+        // 1 heading + 1 paragraph + 1 button → classify as "hero"
+        if (sectionType === "unknown" && matchesHeroHeuristic(path.node.children)) {
+          sectionType = "hero";
+        }
+
+        // Only emit for actual section/main elements or when classification is not unknown
+        if (isSection || sectionType !== "unknown") {
+          structures.push({
+            sectionType,
+            file,
+            line,
+            component,
+          });
+        }
+      }
+    },
   });
 
-  return { facts, colors, suppressions };
+  return { facts, colors, texts, structures, suppressions };
 }
 
 /**
@@ -225,6 +430,8 @@ function processObjectExpression(
 export function extractInlineStyles(files: string[]): ExtractorResult {
   const allFacts: StyleFact[] = [];
   const allColors: ColorFact[] = [];
+  const allTexts: TextFact[] = [];
+  const allStructures: StructuralFact[] = [];
   const allSuppressions: SuppressionFact[] = [];
   const errors: ExtractorError[] = [];
   let filesParsed = 0;
@@ -235,6 +442,8 @@ export function extractInlineStyles(files: string[]): ExtractorResult {
       const result = parseInlineStyles(content, file);
       allFacts.push(...result.facts);
       allColors.push(...result.colors);
+      allTexts.push(...result.texts);
+      allStructures.push(...result.structures);
       allSuppressions.push(...result.suppressions);
       filesParsed++;
     } catch (err) {
@@ -262,8 +471,8 @@ export function extractInlineStyles(files: string[]): ExtractorResult {
     coverage,
     facts: allFacts,
     colors: allColors,
-    texts: [],
-    structures: [],
+    texts: allTexts,
+    structures: allStructures,
     suppressions: allSuppressions,
     errors,
   };
