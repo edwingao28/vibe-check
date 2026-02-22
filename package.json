@@ -20,12 +20,18 @@
   ],
   "license": "MIT",
   "dependencies": {
+    "@babel/parser": "^7.29.0",
+    "@babel/traverse": "^7.29.0",
+    "@babel/types": "^7.29.0",
+    "minimatch": "^10.2.2",
     "postcss": "^8.5.6",
     "postcss-sass": "^0.5.0",
     "postcss-scss": "^4.0.9",
     "yaml": "^2.8.2"
   },
   "devDependencies": {
+    "@types/babel__traverse": "^7.28.0",
+    "@types/minimatch": "^5.1.2",
     "@types/node": "^25.3.0",
     "typescript": "^5.9.3",
     "vitest": "^4.0.18"

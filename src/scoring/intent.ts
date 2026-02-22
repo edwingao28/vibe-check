@@ -1,0 +1,181 @@
+import type { StyleFact } from "../ir/types.js";
+import type { IntentResult, IntentTier, IntentEvidence } from "./types.js";
+
+/**
+ * Calculates the intent score from IR evidence.
+ *
+ * The intent score measures evidence of deliberate design decisions.
+ * It is reported alongside (not instead of) the slop score.
+ *
+ * Contributing signals (from SPEC section 5.1):
+ *   - CSS custom properties (--*): 2 per var, capped at 30
+ *   - Design token files: 15 per file, capped at 30
+ *   - Consistent naming conventions in CSS vars: 10 if consistent --prefix-* pattern
+ *   - Distinct font-family values (>1 = custom fonts): 5 per font after first, cap 15
+ *   - Style guide detection: 5 if STYLE_GUIDE.md or design-system/ found
+ *
+ * Total capped at 100.
+ *
+ * Tier derivation (SPEC section 5.2):
+ *   0-20   -> "None"
+ *   21-55  -> "Partial"
+ *   56-100 -> "Full"
+ */
+export function calculateIntent(
+  facts: StyleFact[],
+  fileList: string[],
+): IntentResult {
+  const evidence: IntentEvidence[] = [];
+  let totalScore = 0;
+
+  // Count CSS custom properties (--* in facts)
+  const cssVarFacts = facts.filter(
+    (f) => f.property.startsWith("--") || f.value.startsWith("--"),
+  );
+  // Deduplicate by property name to count unique vars
+  const uniqueCssVars = new Set(
+    cssVarFacts
+      .filter((f) => f.property.startsWith("--"))
+      .map((f) => f.property),
+  );
+  const cssVarCount = uniqueCssVars.size;
+  const cssVarPoints = Math.min(cssVarCount * 2, 30);
+  if (cssVarCount > 0) {
+    totalScore += cssVarPoints;
+    evidence.push({
+      type: "css-vars",
+      count: cssVarCount,
+      description: `${cssVarCount} CSS custom properties detected`,
+    });
+  }
+
+  // Count design token files
+  const tokenFilePatterns = [
+    /\btokens\./,
+    /\bvariables\.css$/,
+    /\btheme\.ts$/,
+  ];
+  const tokenFiles = fileList.filter((f) => {
+    const basename = f.split("/").pop() ?? "";
+    return tokenFilePatterns.some((p) => p.test(basename));
+  });
+  const tokenFileCount = tokenFiles.length;
+  const tokenFilePoints = Math.min(tokenFileCount * 15, 30);
+  if (tokenFileCount > 0) {
+    totalScore += tokenFilePoints;
+    evidence.push({
+      type: "design-token-files",
+      count: tokenFileCount,
+      description: `${tokenFileCount} design token file(s) found: ${tokenFiles.map((f) => f.split("/").pop()).join(", ")}`,
+    });
+  }
+
+  // Detect naming conventions in CSS vars
+  if (uniqueCssVars.size >= 3) {
+    const prefixes = new Map<string, number>();
+    for (const varName of uniqueCssVars) {
+      // Extract prefix: --prefix-* pattern (at least two segments)
+      const match = varName.match(/^(--[a-zA-Z]+-)/);
+      if (match) {
+        const prefix = match[1];
+        prefixes.set(prefix, (prefixes.get(prefix) ?? 0) + 1);
+      }
+    }
+
+    // Check if there is a dominant prefix used by majority of vars
+    const largestPrefixCount = Math.max(0, ...prefixes.values());
+    if (
+      largestPrefixCount >= 3 &&
+      largestPrefixCount >= uniqueCssVars.size * 0.5
+    ) {
+      totalScore += 10;
+      const dominantPrefix = [...prefixes.entries()].sort(
+        (a, b) => b[1] - a[1],
+      )[0][0];
+      evidence.push({
+        type: "naming-conventions",
+        count: largestPrefixCount,
+        description: `Consistent naming convention detected: ${dominantPrefix}* pattern (${largestPrefixCount} vars)`,
+      });
+    }
+  }
+
+  // Count distinct font-family values
+  const fontFacts = facts.filter((f) => f.property === "font-family");
+  const uniqueFonts = new Set(fontFacts.map((f) => f.value.toLowerCase()));
+  if (uniqueFonts.size > 1) {
+    const customFontCount = uniqueFonts.size - 1;
+    const fontPoints = Math.min(customFontCount * 5, 15);
+    totalScore += fontPoints;
+    evidence.push({
+      type: "custom-fonts",
+      count: customFontCount,
+      description: `${customFontCount} custom font(s) beyond the primary: ${[...uniqueFonts].join(", ")}`,
+    });
+  }
+
+  // Style guide detection
+  const styleGuidePatterns = [/\bSTYLE_GUIDE\.md$/i, /\bdesign-system\//i];
+  const hasStyleGuide = fileList.some((f) =>
+    styleGuidePatterns.some((p) => p.test(f)),
+  );
+  if (hasStyleGuide) {
+    totalScore += 5;
+    evidence.push({
+      type: "style-guide",
+      count: 1,
+      description: "Style guide or design-system directory detected",
+    });
+  }
+
+  // Cap at 100
+  const finalScore = Math.min(totalScore, 100);
+
+  // Derive tier
+  const tier = deriveTier(finalScore);
+
+  // Build attenuations map based on tier
+  const attenuations = buildAttenuationMap(tier);
+
+  return {
+    score: finalScore,
+    tier,
+    evidence,
+    attenuations,
+  };
+}
+
+/**
+ * Derives the intent tier from a raw intent score.
+ *
+ * SPEC section 5.2:
+ *   0-20  -> "None"
+ *   21-55 -> "Partial"
+ *   56-100 -> "Full"
+ */
+export function deriveTier(score: number): IntentTier {
+  if (score <= 20) return "None";
+  if (score <= 55) return "Partial";
+  return "Full";
+}
+
+/**
+ * Builds the attenuation multiplier map based on intent tier.
+ * Used to report which signals were attenuated and by how much.
+ *
+ * From SPEC section 5.3.
+ */
+function buildAttenuationMap(tier: IntentTier): Record<string, number> {
+  const table: Record<string, Record<IntentTier, number>> = {
+    "font-crime": { None: 1.0, Partial: 0.7, Full: 0.4 },
+    "purple-plague": { None: 1.0, Partial: 0.6, Full: 0.3 },
+    "border-radius-maximum": { None: 1.0, Partial: 0.8, Full: 0.5 },
+    "shadow-realm": { None: 1.0, Partial: 0.9, Full: 0.7 },
+  };
+
+  const result: Record<string, number> = {};
+  for (const [signalId, multipliers] of Object.entries(table)) {
+    result[signalId] = multipliers[tier];
+  }
+  return result;
+}

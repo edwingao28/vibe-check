@@ -1,0 +1,26 @@
+/* CSS Module fixture */
+
+.container {
+  padding: 16px;
+  margin: 8px;
+  background-color: #f3e8ff;
+}
+
+.title {
+  font-family: 'Inter', sans-serif;
+  color: #7c3aed;
+  font-size: 24px;
+}
+
+.card {
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  padding: 12px;
+}
+
+.button {
+  background-color: #9333ea;
+  color: white;
+  border-radius: 6px;
+  padding: 8px 16px;
+}

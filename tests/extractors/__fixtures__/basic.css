@@ -1,0 +1,40 @@
+/* Basic CSS fixture with fonts, shadows, colors, border-radius, gradients */
+
+body {
+  font-family: 'Inter', sans-serif;
+  color: #333333;
+  background-color: #ffffff;
+}
+
+h1 {
+  font-family: 'Playfair Display', serif;
+  color: rgb(124, 58, 237);
+}
+
+.card {
+  padding: 16px;
+  margin: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  background-color: hsl(270, 80%, 60%);
+}
+
+.hero {
+  padding: 32px;
+  gap: 24px;
+  background: linear-gradient(to right, #7c3aed, #4f46e5);
+  border-radius: 12px;
+}
+
+.button {
+  padding: 12px 24px;
+  margin-top: 16px;
+  background-color: purple;
+  color: white;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(124, 58, 237, 0.3);
+}
+
+a {
+  color: rebeccapurple;
+}

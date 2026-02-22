@@ -1,0 +1,18 @@
+/* CSS fixture with slop-ignore suppression comments */
+
+/* slop-ignore: shadow-realm */
+.card {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+}
+
+.hero {
+  /* slop-ignore: gradient-overload, purple-plague */
+  background: linear-gradient(to right, #7c3aed, #4f46e5);
+  padding: 32px;
+}
+
+/* slop-ignore: font-crime */
+body {
+  font-family: 'Inter', sans-serif;
+}
