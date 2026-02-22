@@ -23,14 +23,22 @@ Get up and running in under 2 minutes:
 
 ### 2. Run Your First Scan
 
+**In Claude Code:**
 ```bash
 # Smart scope scan (auto-detects src/, client/src/, frontend/, etc.)
-slop-scan
+/slop-check
 
 # Scan a specific directory
-slop-scan apps/marketing
+/slop-check apps/marketing
 
 # Full project scan with verbose output
+/slop-check --full --verbose
+```
+
+**As standalone CLI:**
+```bash
+slop-scan
+slop-scan apps/marketing
 slop-scan --full --verbose
 ```
 
@@ -73,22 +81,28 @@ slop-scan --full --verbose
 
 ### Basic Commands
 
+**In Claude Code:**
 ```bash
 # Smart scope detection (checks src/, client/src/, apps/web/, etc.)
-slop-scan
+/slop-check
 
 # Scan specific directory or file
-slop-scan src/components
-slop-scan apps/marketing/landing.tsx
+/slop-check src/components
+/slop-check apps/marketing/landing.tsx
 
 # Full project scan (ignores smart scope)
-slop-scan --full
+/slop-check --full
 
 # Verbose output with all evidence and file:line references
-slop-scan --verbose
+/slop-check --verbose
 
 # Raw JSON output only (no markdown report)
-slop-scan --json
+/slop-check --json
+```
+
+**Standalone CLI:**
+```bash
+slop-scan [same options as above]
 ```
 
 ### CLI Flags
@@ -267,7 +281,11 @@ bun run build
 # Link plugin for local development
 /plugin link /path/to/vibe-check
 
-# Run on test fixtures
+# Run on test fixtures (in Claude Code)
+/slop-check fixtures/slop-heavy --verbose
+/slop-check fixtures/clean --full
+
+# Or use standalone CLI
 slop-scan fixtures/slop-heavy --verbose
 slop-scan fixtures/clean --full
 ```
