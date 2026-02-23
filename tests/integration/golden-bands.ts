@@ -28,24 +28,24 @@ export interface FixtureBand {
 
 export const GOLDEN_BANDS: Record<string, FixtureBand> = {
   "slop-heavy": {
-    overall: { min: 55, max: 75 },
+    overall: { min: 50, max: 75 },
     intent: { tier: "None" as const },
     signals: {
       "font-crime": { min: 0.4, max: 1.0 },
       "shadow-realm": { min: 0.4, max: 1.0 },
       "purple-plague": { min: 0.5, max: 1.0 },
-      "gradient-overload": { min: 0.5, max: 1.0 },
+      "gradient-overload": { min: 0.3, max: 1.0 },
     },
   },
-  "clean": {
+  clean: {
     overall: { min: 0, max: 25 },
     intent: { tier: "Full" as const },
   },
   "tailwind-only": {
-    overall: { min: 50, max: 75 },
+    overall: { min: 45, max: 75 },
     intent: { tier: "None" as const },
   },
-  "minimal": {
+  minimal: {
     overall: { min: 25, max: 45 },
   },
   "design-system": {

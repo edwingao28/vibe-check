@@ -157,6 +157,111 @@ describe("Cookie Cutter Layout", () => {
     });
   });
 
+  describe("UI library file filtering", () => {
+    it("excludes files in components/ui/ from comparison", () => {
+      const ctx = makeContext({
+        structures: [
+          // shadcn/ui components — should be excluded
+          makeStructuralFact("hero", "src/components/ui/breadcrumb.tsx", 1),
+          makeStructuralFact(
+            "feature-grid",
+            "src/components/ui/breadcrumb.tsx",
+            50,
+          ),
+          makeStructuralFact("hero", "src/components/ui/pagination.tsx", 1),
+          makeStructuralFact(
+            "feature-grid",
+            "src/components/ui/pagination.tsx",
+            50,
+          ),
+          // Only one real page remains => score 0 (can't compare)
+          makeStructuralFact("hero", "src/app/page.tsx", 1),
+          makeStructuralFact("pricing", "src/app/page.tsx", 50),
+        ],
+      });
+
+      const result = cookieCutterLayout.analyze(ctx);
+      // Only 1 non-UI file remains, so fewer than 2 pages => score 0
+      expect(result.score).toBe(0);
+    });
+
+    it("excludes files in node_modules/ from comparison", () => {
+      const ctx = makeContext({
+        structures: [
+          makeStructuralFact("hero", "node_modules/some-lib/component.tsx", 1),
+          makeStructuralFact(
+            "footer",
+            "node_modules/some-lib/component.tsx",
+            50,
+          ),
+          makeStructuralFact("hero", "node_modules/other-lib/widget.tsx", 1),
+          makeStructuralFact("footer", "node_modules/other-lib/widget.tsx", 50),
+          // Two real pages with different structures
+          makeStructuralFact("hero", "src/app/page.tsx", 1),
+          makeStructuralFact("pricing", "src/app/about/page.tsx", 1),
+        ],
+      });
+
+      const result = cookieCutterLayout.analyze(ctx);
+      // node_modules excluded; 2 real pages with Jaccard=0 => score 0
+      expect(result.score).toBe(0);
+    });
+
+    it("still compares normal page files", () => {
+      const ctx = makeContext({
+        structures: [
+          // Two identical real pages
+          makeStructuralFact("hero", "src/app/page.tsx", 1),
+          makeStructuralFact("feature-grid", "src/app/page.tsx", 50),
+          makeStructuralFact("footer", "src/app/page.tsx", 100),
+
+          makeStructuralFact("hero", "src/app/about/page.tsx", 1),
+          makeStructuralFact("feature-grid", "src/app/about/page.tsx", 50),
+          makeStructuralFact("footer", "src/app/about/page.tsx", 100),
+        ],
+      });
+
+      const result = cookieCutterLayout.analyze(ctx);
+      // Jaccard = 1.0, score = 1.0 - 0.3 = 0.7
+      expect(result.score).toBe(0.7);
+    });
+
+    it("adds filtering evidence when UI library files are excluded", () => {
+      const ctx = makeContext({
+        structures: [
+          makeStructuralFact("hero", "src/components/ui/sidebar.tsx", 1),
+          makeStructuralFact("hero", "src/components/ui/dialog.tsx", 1),
+          makeStructuralFact("hero", "src/app/page.tsx", 1),
+          makeStructuralFact("hero", "src/app/about/page.tsx", 1),
+        ],
+      });
+
+      const result = cookieCutterLayout.analyze(ctx);
+      const filterEvidence = result.evidence.find((e) =>
+        e.summary.includes("excluded from comparison"),
+      );
+      expect(filterEvidence).toBeDefined();
+      expect(filterEvidence!.summary).toContain(
+        "2 UI library component structures excluded",
+      );
+    });
+
+    it("does not add filtering evidence when no UI files are present", () => {
+      const ctx = makeContext({
+        structures: [
+          makeStructuralFact("hero", "src/app/page.tsx", 1),
+          makeStructuralFact("hero", "src/app/about/page.tsx", 1),
+        ],
+      });
+
+      const result = cookieCutterLayout.analyze(ctx);
+      const filterEvidence = result.evidence.find((e) =>
+        e.summary.includes("excluded from comparison"),
+      );
+      expect(filterEvidence).toBeUndefined();
+    });
+  });
+
   describe("signal definition", () => {
     it("has correct id and category", () => {
       expect(cookieCutterLayout.id).toBe("cookie-cutter-layout");

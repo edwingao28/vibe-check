@@ -164,9 +164,13 @@ describe("aggregate", () => {
         // content: weight 0.8
         makeSignal("buzzword-bingo", 0.3, { category: "content" }),
         makeSignal("hero-syndrome", 0.3, { category: "content" }),
+        makeSignal("placeholder-content", 0.3, { category: "content" }),
         // structure: weight 0.8
         makeSignal("cookie-cutter-layout", 0.2, { category: "structure" }),
         makeSignal("cta-mania", 0.2, { category: "structure" }),
+        makeSignal("scaffold-bloat", 0.2, { category: "structure" }),
+        makeSignal("ai-scaffold-signature", 0.2, { category: "structure" }),
+        makeSignal("dead-dependency", 0.2, { category: "structure" }),
       ];
 
       const result = aggregate(signals, DEFAULT_CONFIG);
@@ -175,9 +179,9 @@ describe("aggregate", () => {
       const typoScore = Math.sqrt(0.5);
       // spacing-effects: sqrt((4*0.16)/4) = 0.4
       const spacingScore = 0.4;
-      // content: sqrt((2*0.09)/2) = 0.3
+      // content: sqrt((3*0.09)/3) = 0.3
       const contentScore = 0.3;
-      // structure: sqrt((2*0.04)/2) = 0.2
+      // structure: sqrt((5*0.04)/5) = 0.2
       const structureScore = 0.2;
 
       // Overall: 100 * (1.0*typo + 1.0*spacing + 0.8*content + 0.8*structure) / (1.0+1.0+0.8+0.8)

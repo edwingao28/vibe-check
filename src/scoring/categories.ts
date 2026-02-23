@@ -21,13 +21,19 @@ export const CATEGORIES: CategoryDefinition[] = [
   {
     id: "content",
     name: "Content",
-    signalIds: ["buzzword-bingo", "hero-syndrome"],
+    signalIds: ["buzzword-bingo", "hero-syndrome", "placeholder-content"],
     weight: 0.8,
   },
   {
     id: "structure",
     name: "Structure",
-    signalIds: ["cookie-cutter-layout", "cta-mania"],
+    signalIds: [
+      "cookie-cutter-layout",
+      "cta-mania",
+      "scaffold-bloat",
+      "ai-scaffold-signature",
+      "dead-dependency",
+    ],
     weight: 0.8,
   },
 ];

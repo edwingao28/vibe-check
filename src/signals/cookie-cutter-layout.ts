@@ -5,6 +5,9 @@
  * suggesting template-driven design. Uses Jaccard similarity on page
  * fingerprints (ordered lists of section types).
  *
+ * UI library component files (shadcn/ui, Radix, etc.) are filtered out
+ * before comparison since their structure is library-determined.
+ *
  * Scoring:
  *   fingerprint = ordered list of sectionType per page
  *   similarity = Jaccard similarity between fingerprint pairs
@@ -12,11 +15,39 @@
  *   <2 pages => score 0
  */
 
-import type { SignalDefinition, SignalResult, SignalContext, SignalEvidence } from "./types.js";
+import type {
+  SignalDefinition,
+  SignalResult,
+  SignalContext,
+  SignalEvidence,
+} from "./types.js";
 import type { StructuralFact } from "../ir/types.js";
 import { clamp } from "./utils/math.js";
 
 const BASELINE = 0.3;
+
+/**
+ * Known UI library component directory patterns.
+ * Files in these directories are UI primitives (shadcn, Radix, etc.)
+ * and should be excluded from layout similarity comparison because
+ * their structure is determined by the library, not the developer.
+ */
+const UI_LIBRARY_PATTERNS: RegExp[] = [
+  /\/components\/ui\//i, // shadcn/ui default location
+  /\/ui\/(?!pages|views|layouts)/i, // generic /ui/ dir (but not ui/pages etc.)
+  /\/@radix-ui\//i, // Radix UI
+  /(?:^|\/)node_modules\//i, // any node_modules
+  /\/\.next\//i, // Next.js build output
+  /\/\.nuxt\//i, // Nuxt build output
+];
+
+/**
+ * Returns true if a file path matches a known UI library component pattern.
+ * These files should be excluded from cookie-cutter layout detection.
+ */
+function isUILibraryFile(filePath: string): boolean {
+  return UI_LIBRARY_PATTERNS.some((pattern) => pattern.test(filePath));
+}
 
 type SectionType = StructuralFact["sectionType"];
 
@@ -74,9 +105,14 @@ export const cookieCutterLayout: SignalDefinition = {
   analyze(ctx: SignalContext): SignalResult {
     const { structures } = ctx;
 
-    // Group structures by file
+    // Group structures by file, excluding UI library components
     const byFile = new Map<string, StructuralFact[]>();
+    let filteredFileCount = 0;
     for (const s of structures) {
+      if (isUILibraryFile(s.file)) {
+        filteredFileCount++;
+        continue;
+      }
       const arr = byFile.get(s.file) ?? [];
       arr.push(s);
       byFile.set(s.file, arr);
@@ -122,7 +158,11 @@ export const cookieCutterLayout: SignalDefinition = {
 
     // Compute pairwise Jaccard similarities
     const similarities: number[] = [];
-    const pairDetails: Array<{ fileA: string; fileB: string; similarity: number }> = [];
+    const pairDetails: Array<{
+      fileA: string;
+      fileB: string;
+      similarity: number;
+    }> = [];
 
     for (let i = 0; i < files.length; i++) {
       for (let j = i + 1; j < files.length; j++) {
@@ -135,7 +175,8 @@ export const cookieCutterLayout: SignalDefinition = {
     }
 
     // Average pairwise similarity minus baseline, clamped [0, 1]
-    const avgSimilarity = similarities.reduce((a, b) => a + b, 0) / similarities.length;
+    const avgSimilarity =
+      similarities.reduce((a, b) => a + b, 0) / similarities.length;
     const rawScore = clamp(avgSimilarity - BASELINE, 0, 1);
 
     // Build evidence
@@ -149,16 +190,29 @@ export const cookieCutterLayout: SignalDefinition = {
 
     if (topPairs.length > 0) {
       const pairDescriptions = topPairs
-        .map((p) => `${p.fileA} <-> ${p.fileB}: ${(p.similarity * 100).toFixed(0)}%`)
+        .map(
+          (p) =>
+            `${p.fileA} <-> ${p.fileB}: ${(p.similarity * 100).toFixed(0)}%`,
+        )
         .join("; ");
 
       evidence.push({
         summary: `${files.length} pages with avg ${(avgSimilarity * 100).toFixed(0)}% structural similarity`,
         files: files,
-        detail: `Most similar pairs: ${pairDescriptions}. ` +
+        detail:
+          `Most similar pairs: ${pairDescriptions}. ` +
           `Fingerprints: ${[...fingerprints.entries()]
             .map(([f, fp]) => `${f}: [${fp.join(", ")}]`)
             .join("; ")}`,
+      });
+    }
+
+    if (filteredFileCount > 0) {
+      evidence.push({
+        summary: `${filteredFileCount} UI library component structures excluded from comparison`,
+        files: [],
+        detail:
+          "shadcn/ui and framework component files are excluded because their structure is library-determined, not developer-created",
       });
     }
 

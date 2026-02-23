@@ -16,12 +16,17 @@
  *   Boosted if feature-grid section is present.
  */
 
-import type { SignalDefinition, SignalResult, SignalContext, SignalEvidence } from "./types.js";
+import type {
+  SignalDefinition,
+  SignalResult,
+  SignalContext,
+  SignalEvidence,
+} from "./types.js";
 import type { TextFact, StructuralFact } from "../ir/types.js";
 import { clamp } from "./utils/math.js";
 
 /** Maximum line gap between a heading and its paired paragraph */
-const PAIR_LINE_GAP = 10;
+const PAIR_LINE_GAP = 15;
 
 /** Maximum line gap between card groups to be considered a cluster */
 const CLUSTER_LINE_GAP = 50;
@@ -70,6 +75,57 @@ function findCardPairs(texts: TextFact[]): HeadingParagraphPair[] {
           paragraph: p.text,
         });
         usedParagraphs.add(i);
+        break;
+      }
+    }
+  }
+
+  return pairs;
+}
+
+/**
+ * Alternative detection: find clusters of short text elements that suggest
+ * repeated card-like components. When headings are not properly tagged
+ * (common in JSX with dynamic rendering), look for runs of short text
+ * followed by longer text within proximity.
+ *
+ * A "pseudo-card" is a short text (<=8 words, likely a title) followed
+ * by a longer text (>8 words, likely a description) within PAIR_LINE_GAP lines.
+ */
+function findPseudoCardPairs(texts: TextFact[]): HeadingParagraphPair[] {
+  // Get all texts that could be card titles or descriptions
+  const candidates = texts
+    .filter((t) => t.context !== "button" && t.context !== "link")
+    .sort((a, b) => a.line - b.line);
+
+  const pairs: HeadingParagraphPair[] = [];
+  const used = new Set<number>();
+
+  for (let i = 0; i < candidates.length; i++) {
+    if (used.has(i)) continue;
+    const title = candidates[i];
+    const titleWords = title.text.trim().split(/\s+/).length;
+
+    // Short text (1-8 words) is a potential card title
+    if (titleWords > 8) continue;
+
+    // Look for a longer description text nearby
+    for (let j = i + 1; j < candidates.length; j++) {
+      if (used.has(j)) continue;
+      const desc = candidates[j];
+      const gap = desc.line - title.line;
+      if (gap > PAIR_LINE_GAP) break;
+
+      const descWords = desc.text.trim().split(/\s+/).length;
+      if (descWords > 8) {
+        pairs.push({
+          headingLine: title.line,
+          paragraphLine: desc.line,
+          heading: title.text,
+          paragraph: desc.text,
+        });
+        used.add(i);
+        used.add(j);
         break;
       }
     }
@@ -154,7 +210,16 @@ export const cardCarnival: SignalDefinition = {
     const allClusters: CardCluster[] = [];
 
     for (const [file, fileFacts] of byFile) {
-      const pairs = findCardPairs(fileFacts);
+      // Try heading+paragraph pairs first; fall back to pseudo-card detection
+      let pairs = findCardPairs(fileFacts);
+      if (pairs.length < 3) {
+        // Not enough formal heading+paragraph pairs found;
+        // try pseudo-card detection for JSX with untagged headings
+        const pseudoPairs = findPseudoCardPairs(fileFacts);
+        if (pseudoPairs.length > pairs.length) {
+          pairs = pseudoPairs;
+        }
+      }
       const clusters = clusterPairs(pairs);
 
       for (const cluster of clusters) {

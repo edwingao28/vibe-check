@@ -5,6 +5,9 @@
  * suggesting template-driven design. Uses Jaccard similarity on page
  * fingerprints (ordered lists of section types).
  *
+ * UI library component files (shadcn/ui, Radix, etc.) are filtered out
+ * before comparison since their structure is library-determined.
+ *
  * Scoring:
  *   fingerprint = ordered list of sectionType per page
  *   similarity = Jaccard similarity between fingerprint pairs
@@ -13,6 +16,27 @@
  */
 import { clamp } from "./utils/math.js";
 const BASELINE = 0.3;
+/**
+ * Known UI library component directory patterns.
+ * Files in these directories are UI primitives (shadcn, Radix, etc.)
+ * and should be excluded from layout similarity comparison because
+ * their structure is determined by the library, not the developer.
+ */
+const UI_LIBRARY_PATTERNS = [
+    /\/components\/ui\//i, // shadcn/ui default location
+    /\/ui\/(?!pages|views|layouts)/i, // generic /ui/ dir (but not ui/pages etc.)
+    /\/@radix-ui\//i, // Radix UI
+    /(?:^|\/)node_modules\//i, // any node_modules
+    /\/\.next\//i, // Next.js build output
+    /\/\.nuxt\//i, // Nuxt build output
+];
+/**
+ * Returns true if a file path matches a known UI library component pattern.
+ * These files should be excluded from cookie-cutter layout detection.
+ */
+function isUILibraryFile(filePath) {
+    return UI_LIBRARY_PATTERNS.some((pattern) => pattern.test(filePath));
+}
 /**
  * Generate a fingerprint for a page: an ordered list of section types.
  */
@@ -61,9 +85,14 @@ export const cookieCutterLayout = {
     attenuatable: false,
     analyze(ctx) {
         const { structures } = ctx;
-        // Group structures by file
+        // Group structures by file, excluding UI library components
         const byFile = new Map();
+        let filteredFileCount = 0;
         for (const s of structures) {
+            if (isUILibraryFile(s.file)) {
+                filteredFileCount++;
+                continue;
+            }
             const arr = byFile.get(s.file) ?? [];
             arr.push(s);
             byFile.set(s.file, arr);
@@ -135,6 +164,13 @@ export const cookieCutterLayout = {
                     `Fingerprints: ${[...fingerprints.entries()]
                         .map(([f, fp]) => `${f}: [${fp.join(", ")}]`)
                         .join("; ")}`,
+            });
+        }
+        if (filteredFileCount > 0) {
+            evidence.push({
+                summary: `${filteredFileCount} UI library component structures excluded from comparison`,
+                files: [],
+                detail: "shadcn/ui and framework component files are excluded because their structure is library-determined, not developer-created",
             });
         }
         return {

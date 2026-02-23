@@ -49,6 +49,11 @@ export const BUZZWORDS: Record<string, BuzzwordTier> = {
       "elevate",
       "unlock",
       "supercharge",
+      "discover",
+      "personalized",
+      "curated",
+      "ai-powered",
+      "smart",
     ],
   },
   tierC: {
@@ -64,19 +69,39 @@ export const BUZZWORDS: Record<string, BuzzwordTier> = {
       "comprehensive",
       "flexible",
       "efficient",
+      "trending",
+      "relevant",
+      "beautifully",
+      "driven",
+      "actionable",
+      "insights",
     ],
   },
 };
 
 export const PHRASE_PATTERNS: PhrasePattern[] = [
-  { pattern: /in today'?s (?:fast-paced|digital|modern|ever-changing) world/i, weight: 5 },
+  {
+    pattern: /in today'?s (?:fast-paced|digital|modern|ever-changing) world/i,
+    weight: 5,
+  },
   { pattern: /whether you'?re a .+ or (?:a )?.+/i, weight: 4 },
   { pattern: /take your .+ to the next level/i, weight: 5 },
   { pattern: /designed with you in mind/i, weight: 5 },
   { pattern: /built for the modern .+/i, weight: 4 },
   { pattern: /everything you need to .+/i, weight: 3 },
-  { pattern: /ready to (?:get started|transform|revolutionize|elevate)/i, weight: 4 },
+  {
+    pattern: /ready to (?:get started|transform|revolutionize|elevate)/i,
+    weight: 4,
+  },
   { pattern: /join (?:thousands|millions|hundreds) of .+ who/i, weight: 4 },
   { pattern: /it'?s (?:time to|never been easier)/i, weight: 3 },
   { pattern: /from .+ to .+,? we'?ve got you covered/i, weight: 5 },
+  { pattern: /discover .+ before/i, weight: 4 },
+  {
+    pattern: /powered by (?:ai|artificial intelligence|machine learning)/i,
+    weight: 3,
+  },
+  { pattern: /delivered (?:straight |right |directly )?to your/i, weight: 3 },
+  { pattern: /never miss (?:a|an|another)/i, weight: 3 },
+  { pattern: /stay ahead of/i, weight: 3 },
 ];

@@ -106,13 +106,19 @@ async function main() {
     for (const file of scopeResult.files) {
         const fullPath = resolve(projectRoot, file);
         const ext = extname(file);
-        if (file.endsWith(".module.css") || file.endsWith(".module.scss") || file.endsWith(".module.sass")) {
+        if (file.endsWith(".module.css") ||
+            file.endsWith(".module.scss") ||
+            file.endsWith(".module.sass")) {
             cssModuleFiles.push(fullPath);
         }
         else if (ext === ".css" || ext === ".scss" || ext === ".sass") {
             cssFiles.push(fullPath);
         }
-        if (ext === ".tsx" || ext === ".jsx" || ext === ".ts" || ext === ".js" || ext === ".mdx") {
+        if (ext === ".tsx" ||
+            ext === ".jsx" ||
+            ext === ".ts" ||
+            ext === ".js" ||
+            ext === ".mdx") {
             jsxTsxFiles.push(fullPath);
         }
     }
@@ -160,6 +166,8 @@ async function main() {
         suppressions: irStore.suppressions,
         extractorHealth: irStore.extractorHealth,
         config,
+        fileList: scopeResult.files,
+        projectRoot,
     };
     const signalResults = runSignals(signalContext, config);
     // 5. Calculate intent

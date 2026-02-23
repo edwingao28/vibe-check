@@ -1,6 +1,6 @@
 {
   "name": "slop-detector",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Detects AI-generated slop in web projects",
   "type": "module",
   "main": "dist/index.js",

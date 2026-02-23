@@ -32,6 +32,10 @@ import { emojiInfestation } from "./emoji-infestation.js";
 import { testimonialFactory } from "./testimonial-factory.js";
 import { cardCarnival } from "./card-carnival.js";
 import { stockPhotoSyndrome } from "./stock-photo-syndrome.js";
+import { scaffoldBloat } from "./scaffold-bloat.js";
+import { placeholderContent } from "./placeholder-content.js";
+import { aiScaffoldSignature } from "./ai-scaffold-signature.js";
+import { deadDependency } from "./dead-dependency.js";
 
 /**
  * Tier 1 signal definitions (deterministic, always run).
@@ -57,12 +61,19 @@ export const tier2Signals: SignalDefinition[] = [
   testimonialFactory,
   cardCarnival,
   stockPhotoSyndrome,
+  scaffoldBloat,
+  placeholderContent,
+  aiScaffoldSignature,
+  deadDependency,
 ];
 
 /**
  * All registered signals (Tier 1 + Tier 2).
  */
-export const allSignals: SignalDefinition[] = [...tier1Signals, ...tier2Signals];
+export const allSignals: SignalDefinition[] = [
+  ...tier1Signals,
+  ...tier2Signals,
+];
 
 /**
  * Check the health status of a signal's extractor dependencies.
@@ -74,7 +85,7 @@ export const allSignals: SignalDefinition[] = [...tier1Signals, ...tier2Signals]
  */
 function checkDependencyHealth(
   needs: string[],
-  extractorHealth: Map<string, ExtractorStatus>
+  extractorHealth: Map<string, ExtractorStatus>,
 ): "all_healthy" | "some_degraded" | "all_failed" {
   if (needs.length === 0) return "all_healthy";
 
@@ -126,7 +137,7 @@ function makeInsufficientResult(signal: SignalDefinition): SignalResult {
  */
 function reducedConfidence(
   result: SignalResult,
-  healthStatus: "all_healthy" | "some_degraded"
+  healthStatus: "all_healthy" | "some_degraded",
 ): SignalResult {
   if (healthStatus === "some_degraded" && result.confidence === "high") {
     return { ...result, confidence: "medium" };
@@ -141,7 +152,10 @@ function reducedConfidence(
  * @param config - The SlopConfig (used to check disabled list)
  * @returns Array of SignalResult for every registered signal (including skipped/insufficient)
  */
-export function runSignals(ctx: SignalContext, config: SlopConfig): SignalResult[] {
+export function runSignals(
+  ctx: SignalContext,
+  config: SlopConfig,
+): SignalResult[] {
   const results: SignalResult[] = [];
 
   for (const signal of allSignals) {

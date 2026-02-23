@@ -1,6 +1,78 @@
 import type { StyleFact } from "../ir/types.js";
 import type { IntentResult, IntentTier, IntentEvidence } from "./types.js";
 
+// ---------------------------------------------------------------------------
+// Framework-default CSS variable filtering
+// ---------------------------------------------------------------------------
+
+/**
+ * CSS variable patterns from popular UI frameworks that represent
+ * framework defaults, not custom design decisions.
+ *
+ * Variables matching any of these patterns are excluded from the intent
+ * score because they ship out-of-the-box with shadcn/ui, Tailwind CSS,
+ * Radix UI, etc. and do not indicate deliberate design work.
+ */
+const FRAMEWORK_CSS_VAR_PATTERNS: RegExp[] = [
+  // shadcn/ui / Radix UI defaults
+  /^--background$/,
+  /^--foreground$/,
+  /^--card$/,
+  /^--card-foreground$/,
+  /^--popover$/,
+  /^--popover-foreground$/,
+  /^--primary$/,
+  /^--primary-foreground$/,
+  /^--secondary$/,
+  /^--secondary-foreground$/,
+  /^--muted$/,
+  /^--muted-foreground$/,
+  /^--accent$/,
+  /^--accent-foreground$/,
+  /^--destructive$/,
+  /^--destructive-foreground$/,
+  /^--border$/,
+  /^--input$/,
+  /^--ring$/,
+  /^--radius$/,
+  /^--chart-\d+$/,
+  /^--sidebar-/, // --sidebar-background, --sidebar-foreground, etc.
+
+  // Tailwind CSS defaults
+  /^--tw-/, // Tailwind internal vars
+  /^--color-/, // Tailwind v4 color vars
+  /^--spacing$/,
+  /^--font-/, // --font-sans, --font-mono, etc.
+  /^--shadow-/, // --shadow-sm, --shadow-lg, etc.
+  /^--animate-/, // --animate-* Tailwind animation vars
+  /^--ease-/, // --ease-* timing functions
+  /^--breakpoint-/, // --breakpoint-sm, etc.
+  /^--container-/, // container query vars
+  /^--default-/, // --default-* Tailwind defaults
+  /^--text-/, // --text-sm, --text-base, etc.
+  /^--tracking-/, // letter spacing
+  /^--leading-/, // line height
+  /^--radius-/, // --radius-sm, --radius-lg, etc.
+  /^--inset-/, // --inset-ring, --inset-shadow
+  /^--blur$/,
+  /^--backdrop-/,
+  /^--perspective-/,
+  /^--aspect-/,
+];
+
+/**
+ * Returns true if `varName` matches a known framework-default CSS variable
+ * pattern. These variables ship with popular UI frameworks and should not
+ * be counted as evidence of custom design intent.
+ */
+export function isFrameworkDefault(varName: string): boolean {
+  return FRAMEWORK_CSS_VAR_PATTERNS.some((pattern) => pattern.test(varName));
+}
+
+// ---------------------------------------------------------------------------
+// Intent calculation
+// ---------------------------------------------------------------------------
+
 /**
  * Calculates the intent score from IR evidence.
  *
@@ -28,7 +100,9 @@ export function calculateIntent(
   const evidence: IntentEvidence[] = [];
   let totalScore = 0;
 
-  // Count CSS custom properties (--* in facts)
+  // -----------------------------------------------------------------------
+  // Count CSS custom properties (--* in facts), filtering framework defaults
+  // -----------------------------------------------------------------------
   const cssVarFacts = facts.filter(
     (f) => f.property.startsWith("--") || f.value.startsWith("--"),
   );
@@ -38,23 +112,36 @@ export function calculateIntent(
       .filter((f) => f.property.startsWith("--"))
       .map((f) => f.property),
   );
-  const cssVarCount = uniqueCssVars.size;
-  const cssVarPoints = Math.min(cssVarCount * 2, 30);
-  if (cssVarCount > 0) {
+
+  // Partition into framework-default and custom (non-framework) vars
+  const frameworkDefaultVars = new Set<string>();
+  const customCssVars = new Set<string>();
+  for (const varName of uniqueCssVars) {
+    if (isFrameworkDefault(varName)) {
+      frameworkDefaultVars.add(varName);
+    } else {
+      customCssVars.add(varName);
+    }
+  }
+
+  const customCssVarCount = customCssVars.size;
+  const frameworkDefaultCount = frameworkDefaultVars.size;
+  const cssVarPoints = Math.min(customCssVarCount * 2, 30);
+  if (customCssVarCount > 0 || frameworkDefaultCount > 0) {
     totalScore += cssVarPoints;
+    const filteredNote =
+      frameworkDefaultCount > 0
+        ? ` (${frameworkDefaultCount} framework defaults filtered)`
+        : "";
     evidence.push({
       type: "css-vars",
-      count: cssVarCount,
-      description: `${cssVarCount} CSS custom properties detected`,
+      count: customCssVarCount,
+      description: `${customCssVarCount} custom CSS properties detected${filteredNote}`,
     });
   }
 
   // Count design token files
-  const tokenFilePatterns = [
-    /\btokens\./,
-    /\bvariables\.css$/,
-    /\btheme\.ts$/,
-  ];
+  const tokenFilePatterns = [/\btokens\./, /\bvariables\.css$/, /\btheme\.ts$/];
   const tokenFiles = fileList.filter((f) => {
     const basename = f.split("/").pop() ?? "";
     return tokenFilePatterns.some((p) => p.test(basename));
@@ -70,10 +157,10 @@ export function calculateIntent(
     });
   }
 
-  // Detect naming conventions in CSS vars
-  if (uniqueCssVars.size >= 3) {
+  // Detect naming conventions in custom (non-framework) CSS vars only
+  if (customCssVars.size >= 3) {
     const prefixes = new Map<string, number>();
-    for (const varName of uniqueCssVars) {
+    for (const varName of customCssVars) {
       // Extract prefix: --prefix-* pattern (at least two segments)
       const match = varName.match(/^(--[a-zA-Z]+-)/);
       if (match) {
@@ -82,11 +169,11 @@ export function calculateIntent(
       }
     }
 
-    // Check if there is a dominant prefix used by majority of vars
+    // Check if there is a dominant prefix used by majority of custom vars
     const largestPrefixCount = Math.max(0, ...prefixes.values());
     if (
       largestPrefixCount >= 3 &&
-      largestPrefixCount >= uniqueCssVars.size * 0.5
+      largestPrefixCount >= customCssVars.size * 0.5
     ) {
       totalScore += 10;
       const dominantPrefix = [...prefixes.entries()].sort(

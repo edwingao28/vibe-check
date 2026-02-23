@@ -1,6 +1,10 @@
 export type SignalStatus = "scored" | "insufficient_data";
 
-export type CategoryId = "typography-color" | "spacing-effects" | "content" | "structure";
+export type CategoryId =
+  | "typography-color"
+  | "spacing-effects"
+  | "content"
+  | "structure";
 
 export interface SignalEvidence {
   summary: string;
@@ -35,6 +39,13 @@ export interface SignalContext {
   texts: import("../ir/types.js").TextFact[];
   structures: import("../ir/types.js").StructuralFact[];
   suppressions: import("../ir/types.js").SuppressionFact[];
-  extractorHealth: Map<string, import("../extractors/types.js").ExtractorStatus>;
+  extractorHealth: Map<
+    string,
+    import("../extractors/types.js").ExtractorStatus
+  >;
   config: import("../config/types.js").SlopConfig;
+  /** All scoped file paths (relative to projectRoot). Available for file-level signals. */
+  fileList?: string[];
+  /** Absolute path to the project root. Available for file-level signals. */
+  projectRoot?: string;
 }

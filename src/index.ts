@@ -85,10 +85,14 @@ async function main(): Promise<void> {
 
   // --deep and --no-cache are accepted but no-op in v1
   if (values.deep) {
-    console.error("Note: --deep flag is accepted but is a no-op in v1. Deep scan requires LLM integration.");
+    console.error(
+      "Note: --deep flag is accepted but is a no-op in v1. Deep scan requires LLM integration.",
+    );
   }
   if (values["no-cache"]) {
-    console.error("Note: --no-cache flag is accepted but is a no-op in v1. Caching is not yet implemented.");
+    console.error(
+      "Note: --no-cache flag is accepted but is a no-op in v1. Caching is not yet implemented.",
+    );
   }
 
   const startTime = Date.now();
@@ -124,13 +128,23 @@ async function main(): Promise<void> {
     const fullPath = resolve(projectRoot, file);
     const ext = extname(file);
 
-    if (file.endsWith(".module.css") || file.endsWith(".module.scss") || file.endsWith(".module.sass")) {
+    if (
+      file.endsWith(".module.css") ||
+      file.endsWith(".module.scss") ||
+      file.endsWith(".module.sass")
+    ) {
       cssModuleFiles.push(fullPath);
     } else if (ext === ".css" || ext === ".scss" || ext === ".sass") {
       cssFiles.push(fullPath);
     }
 
-    if (ext === ".tsx" || ext === ".jsx" || ext === ".ts" || ext === ".js" || ext === ".mdx") {
+    if (
+      ext === ".tsx" ||
+      ext === ".jsx" ||
+      ext === ".ts" ||
+      ext === ".js" ||
+      ext === ".mdx"
+    ) {
       jsxTsxFiles.push(fullPath);
     }
   }
@@ -180,6 +194,8 @@ async function main(): Promise<void> {
     suppressions: irStore.suppressions,
     extractorHealth: irStore.extractorHealth,
     config,
+    fileList: scopeResult.files,
+    projectRoot,
   };
 
   const signalResults = runSignals(signalContext, config);
@@ -197,8 +213,14 @@ async function main(): Promise<void> {
   const band = getBand(slopScore);
   const coverage = irStore.getCoverage();
   const extractorStatuses = irStore.getExtractorResults().map((r) => r.status);
-  const excludedCategories = categories.filter((c) => Number.isNaN(c.score)).length;
-  const confidence = getConfidence(coverage.overallCoverage, extractorStatuses, excludedCategories);
+  const excludedCategories = categories.filter((c) =>
+    Number.isNaN(c.score),
+  ).length;
+  const confidence = getConfidence(
+    coverage.overallCoverage,
+    extractorStatuses,
+    excludedCategories,
+  );
 
   // Build the full ScoringResult
   const scoringResult: ScoringResult = {

@@ -26,6 +26,10 @@ import { emojiInfestation } from "./emoji-infestation.js";
 import { testimonialFactory } from "./testimonial-factory.js";
 import { cardCarnival } from "./card-carnival.js";
 import { stockPhotoSyndrome } from "./stock-photo-syndrome.js";
+import { scaffoldBloat } from "./scaffold-bloat.js";
+import { placeholderContent } from "./placeholder-content.js";
+import { aiScaffoldSignature } from "./ai-scaffold-signature.js";
+import { deadDependency } from "./dead-dependency.js";
 /**
  * Tier 1 signal definitions (deterministic, always run).
  */
@@ -49,11 +53,18 @@ export const tier2Signals = [
     testimonialFactory,
     cardCarnival,
     stockPhotoSyndrome,
+    scaffoldBloat,
+    placeholderContent,
+    aiScaffoldSignature,
+    deadDependency,
 ];
 /**
  * All registered signals (Tier 1 + Tier 2).
  */
-export const allSignals = [...tier1Signals, ...tier2Signals];
+export const allSignals = [
+    ...tier1Signals,
+    ...tier2Signals,
+];
 /**
  * Check the health status of a signal's extractor dependencies.
  *

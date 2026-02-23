@@ -6,7 +6,13 @@
  */
 
 import type { SignalContext } from "../../../src/signals/types.js";
-import type { StyleFact, ColorFact, TextFact, StructuralFact, SuppressionFact } from "../../../src/ir/types.js";
+import type {
+  StyleFact,
+  ColorFact,
+  TextFact,
+  StructuralFact,
+  SuppressionFact,
+} from "../../../src/ir/types.js";
 import type { ExtractorStatus } from "../../../src/extractors/types.js";
 import type { SlopConfig } from "../../../src/config/types.js";
 import { DEFAULT_CONFIG } from "../../../src/config/defaults.js";
@@ -19,6 +25,8 @@ export interface MakeContextOptions {
   suppressions?: SuppressionFact[];
   extractorHealth?: Record<string, ExtractorStatus>;
   config?: Partial<SlopConfig>;
+  fileList?: string[];
+  projectRoot?: string;
 }
 
 /**
@@ -47,7 +55,10 @@ export function makeContext(opts: MakeContextOptions = {}): SignalContext {
         signals: { ...DEFAULT_CONFIG.signals, ...opts.config.signals },
         intent: { ...DEFAULT_CONFIG.intent, ...opts.config.intent },
         scope: { ...DEFAULT_CONFIG.scope, ...opts.config.scope },
-        suppressions: { ...DEFAULT_CONFIG.suppressions, ...opts.config.suppressions },
+        suppressions: {
+          ...DEFAULT_CONFIG.suppressions,
+          ...opts.config.suppressions,
+        },
       }
     : DEFAULT_CONFIG;
 
@@ -59,13 +70,17 @@ export function makeContext(opts: MakeContextOptions = {}): SignalContext {
     suppressions: opts.suppressions ?? [],
     extractorHealth: healthMap,
     config,
+    ...(opts.fileList !== undefined && { fileList: opts.fileList }),
+    ...(opts.projectRoot !== undefined && { projectRoot: opts.projectRoot }),
   };
 }
 
 /**
  * Helper to create a StyleFact with minimal required fields.
  */
-export function makeFact(overrides: Partial<StyleFact> & { property: string; value: string }): StyleFact {
+export function makeFact(
+  overrides: Partial<StyleFact> & { property: string; value: string },
+): StyleFact {
   return {
     rawValue: overrides.rawValue ?? overrides.value,
     source: "css",

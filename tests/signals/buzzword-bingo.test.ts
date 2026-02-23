@@ -9,15 +9,15 @@ describe("Buzzword Bingo", () => {
         texts: [
           makeTextFact(
             "Our synergy-driven platform will revolutionize your game-changing workflow. " +
-            "This next-generation paradigm shift is disruptive and best-in-class. " +
-            "A world-class turn-key bleeding-edge solution that leverages innovation.",
+              "This next-generation paradigm shift is disruptive and best-in-class. " +
+              "A world-class turn-key bleeding-edge solution that leverages innovation.",
             "paragraph",
             "page.tsx",
             1,
           ),
           makeTextFact(
             "Empower your team to streamline operations with cutting-edge solutions. " +
-            "Optimize and transform your business. Elevate and unlock supercharge potential.",
+              "Optimize and transform your business. Elevate and unlock supercharge potential.",
             "paragraph",
             "page.tsx",
             10,
@@ -35,10 +35,10 @@ describe("Buzzword Bingo", () => {
         texts: [
           makeTextFact(
             "In today's fast-paced world, you need a synergy-driven revolutionary solution. " +
-            "Take your business to the next level with our game-changing platform. " +
-            "Whether you're a startup or a large enterprise, we have disruptive solutions. " +
-            "Designed with you in mind, our next-generation tools will supercharge your workflow. " +
-            "It's time to leverage cutting-edge innovative seamless robust scalable technology.",
+              "Take your business to the next level with our game-changing platform. " +
+              "Whether you're a startup or a large enterprise, we have disruptive solutions. " +
+              "Designed with you in mind, our next-generation tools will supercharge your workflow. " +
+              "It's time to leverage cutting-edge innovative seamless robust scalable technology.",
             "paragraph",
             "page.tsx",
             1,
@@ -57,8 +57,8 @@ describe("Buzzword Bingo", () => {
         texts: [
           makeTextFact(
             "Our application helps teams manage their projects. " +
-            "Track tasks, set deadlines, and collaborate with your team. " +
-            "Simple pricing, no surprises.",
+              "Track tasks, set deadlines, and collaborate with your team. " +
+              "Simple pricing, no surprises.",
             "paragraph",
             "page.tsx",
             1,
@@ -75,7 +75,7 @@ describe("Buzzword Bingo", () => {
         texts: [
           makeTextFact(
             "Our innovative platform helps you manage tasks effectively. " +
-            "We built a simple tool that works.",
+              "We built a simple tool that works.",
             "paragraph",
             "page.tsx",
             1,
@@ -89,7 +89,9 @@ describe("Buzzword Bingo", () => {
 
     it("scores 0 when density is low even with some variety", () => {
       // Lots of normal text with a few buzzwords scattered in
-      const normalText = "The quick brown fox jumps over the lazy dog. ".repeat(50);
+      const normalText = "The quick brown fox jumps over the lazy dog. ".repeat(
+        50,
+      );
       const ctx = makeContext({
         texts: [
           makeTextFact(
@@ -108,7 +110,7 @@ describe("Buzzword Bingo", () => {
   });
 
   describe("threshold behavior", () => {
-    it("requires both density > 2 AND variety > 3 to flag", () => {
+    it("requires both density > 1 AND variety > 2 to flag", () => {
       // High density but low variety (same word repeated)
       const ctx = makeContext({
         texts: [
@@ -141,9 +143,9 @@ describe("Buzzword Bingo", () => {
           // Page 2: sloppy
           makeTextFact(
             "Our synergy-driven next-generation paradigm shift will revolutionize your game-changing " +
-            "disruptive best-in-class world-class bleeding-edge workflow. " +
-            "Leverage and empower your team to streamline cutting-edge solutions. " +
-            "Optimize transform elevate unlock supercharge your innovative seamless robust business.",
+              "disruptive best-in-class world-class bleeding-edge workflow. " +
+              "Leverage and empower your team to streamline cutting-edge solutions. " +
+              "Optimize transform elevate unlock supercharge your innovative seamless robust business.",
             "paragraph",
             "sloppy-page.tsx",
             1,
@@ -154,7 +156,9 @@ describe("Buzzword Bingo", () => {
       const result = buzzwordBingo.analyze(ctx);
       expect(result.score).toBeGreaterThan(0);
       // Evidence should reference the sloppy page
-      const sloppyEvidence = result.evidence.find(e => e.files.includes("sloppy-page.tsx"));
+      const sloppyEvidence = result.evidence.find((e) =>
+        e.files.includes("sloppy-page.tsx"),
+      );
       expect(sloppyEvidence).toBeDefined();
     });
   });
@@ -173,8 +177,8 @@ describe("Buzzword Bingo", () => {
         texts: [
           makeTextFact(
             "It's time to take your game-changing paradigm shift to the next level! " +
-            "Our best-in-class synergy-driven solution will revolutionize your world-class workflow. " +
-            "Leverage cutting-edge innovative seamless robust technology.",
+              "Our best-in-class synergy-driven solution will revolutionize your world-class workflow. " +
+              "Leverage cutting-edge innovative seamless robust technology.",
             "paragraph",
             "page.tsx",
             1,
@@ -191,9 +195,9 @@ describe("Buzzword Bingo", () => {
         texts: [
           makeTextFact(
             "Our game-changing next-generation best-in-class world-class bleeding-edge " +
-            "turn-key cutting-edge solution brings synergy and will revolutionize everything. " +
-            "Leverage empower streamline optimize transform elevate unlock supercharge " +
-            "innovative seamless robust scalable dynamic.",
+              "turn-key cutting-edge solution brings synergy and will revolutionize everything. " +
+              "Leverage empower streamline optimize transform elevate unlock supercharge " +
+              "innovative seamless robust scalable dynamic.",
             "paragraph",
             "page.tsx",
             1,

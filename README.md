@@ -1,16 +1,16 @@
-# 🎭 vibe-check
+# vibe-check
 
-> **Detect AI-generated slop in web projects** — Scans CSS, Tailwind, and JSX for 14 signals of AI-generated design patterns
+> **Detect AI-generated slop in web projects** -- Scans CSS, Tailwind, and JSX for 18 signals of AI-generated design patterns
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-blue.svg)](https://www.typescriptlang.org/)
-[![Tests](https://img.shields.io/badge/tests-362%20passing-brightgreen.svg)]()
+[![Tests](https://img.shields.io/badge/tests-445%20passing-brightgreen.svg)]()
 
-**vibe-check** is a static analysis tool that detects AI-generated "slop" in web projects. It analyzes your CSS, Tailwind classes, and JSX/TSX files to identify 14 telltale signals of AI-generated design patterns — from gradient overload and emoji infestation to cookie-cutter layouts and testimonial factories.
+**vibe-check** is a static analysis tool that detects AI-generated "slop" in web projects. It analyzes your CSS, Tailwind classes, JSX/TSX files, project structure, and dependency graph to identify 18 telltale signals of AI-generated design patterns -- from gradient overload and emoji infestation to scaffold bloat and dead dependencies.
 
 ---
 
-## 🚀 Quick Start
+## Quick Start
 
 Get up and running in under 2 minutes:
 
@@ -24,6 +24,7 @@ Get up and running in under 2 minutes:
 ### 2. Run Your First Scan
 
 **In Claude Code:**
+
 ```bash
 # Smart scope scan (auto-detects src/, client/src/, frontend/, etc.)
 /slop-check
@@ -36,6 +37,7 @@ Get up and running in under 2 minutes:
 ```
 
 **As standalone CLI:**
+
 ```bash
 slop-scan
 slop-scan apps/marketing
@@ -49,39 +51,48 @@ slop-scan --full --verbose
 
 ---
 
-## 📊 What It Detects
+## What It Detects
 
-**14 AI Slop Signals** organized into 4 categories:
+**18 AI Slop Signals** organized into 4 categories:
 
-### 🎨 **Visual Signals** (Tier 1)
-- **Purple Plague** — Overuse of purple/violet gradients (AI's favorite color)
-- **Gradient Overload** — Excessive gradient backgrounds
-- **Font Crime** — Ultra-thin fonts (font-weight ≤ 200)
-- **Emoji Infestation** — Decorative emojis everywhere (zero tolerance)
+### Typography & Color (Tier 1, weight 1.0)
 
-### 🏗️ **Structural Signals** (Tier 1)
-- **Hero Syndrome** — Generic hero sections with buzzword headings
-- **Cookie Cutter Layout** — Predictable 3-column feature grids
+- **Purple Plague** -- Overuse of purple/violet gradients (AI's favorite color)
+- **Font Crime** -- Ultra-thin fonts (font-weight <= 200)
 
-### 📝 **Content Signals** (Tier 2)
-- **Buzzword Bingo** — AI marketing jargon ("revolutionary", "cutting-edge", "seamless")
-- **CTA Mania** — Overly aggressive call-to-action buttons
-- **Testimonial Factory** — Generic fake testimonials with attribution patterns
-- **Card Carnival** — Repeated heading+paragraph card patterns
+### Spacing & Effects (Tier 1, weight 1.0)
 
-### 🖼️ **Asset Signals** (Tier 2)
-- **Stock Photo Syndrome** — Unsplash/Pexels/placeholder image URLs
-- **Whitespace Wasteland** — Excessive spacing (padding/margin > 100px)
-- **Shadow Realm** — Overuse of box-shadow effects
-- **Border Radius Maximum** — Everything is rounded (border-radius > 20px)
+- **Gradient Overload** -- Excessive gradient backgrounds (grouped by proximity)
+- **Whitespace Wasteland** -- Low entropy in spacing values
+- **Shadow Realm** -- Overuse of box-shadow effects
+- **Border Radius Maximum** -- Everything is rounded (border-radius > 20px)
+
+### Content (Tier 2, weight 0.8)
+
+- **Buzzword Bingo** -- AI marketing jargon ("revolutionary", "cutting-edge", "seamless")
+- **Hero Syndrome** -- Generic hero sections with buzzword headings
+- **Placeholder Content** -- **NEW** Fake names, lorem ipsum, placeholder metrics ($99.99/mo, 10,000+)
+- **Emoji Infestation** -- Decorative emojis everywhere
+- **Testimonial Factory** -- Generic fake testimonials with attribution patterns
+- **Card Carnival** -- Repeated heading+paragraph card patterns
+- **Stock Photo Syndrome** -- Unsplash/Pexels/placeholder image URLs
+
+### Structure (Tier 2, weight 0.8)
+
+- **Cookie Cutter Layout** -- Identical page structures (UI library files excluded)
+- **CTA Mania** -- Excessive call-to-action buttons (app buttons filtered, marketing vs app thresholds)
+- **Scaffold Bloat** -- **NEW** Excessive UI library components vs custom code (e.g., 47 shadcn components vs 4 custom)
+- **AI Scaffold Signature** -- **NEW** Detects Replit, Bolt, v0, Lovable, Cursor artifacts
+- **Dead Dependency** -- **NEW** Heavy packages installed but never imported (framer-motion, three.js, recharts, etc.)
 
 ---
 
-## 📖 Usage
+## Usage
 
 ### Basic Commands
 
 **In Claude Code:**
+
 ```bash
 # Smart scope detection (checks src/, client/src/, apps/web/, etc.)
 /slop-check
@@ -101,90 +112,87 @@ slop-scan --full --verbose
 ```
 
 **Standalone CLI:**
+
 ```bash
 slop-scan [same options as above]
 ```
 
 ### CLI Flags
 
-| Flag | Description |
-|------|-------------|
-| `--verbose` | Full signal details, all evidence, file:line references |
-| `--json` | Raw JSON output (schema v1) |
-| `--full` | Scan entire project (ignore smart scope detection) |
-| `--deep` | *(No-op in v1)* Enable LLM-assisted Tier 2 deep scan |
-| `--no-cache` | *(No-op in v1)* Disable cache for this run |
-| `--help` | Show help message |
+| Flag         | Description                                             |
+| ------------ | ------------------------------------------------------- |
+| `--verbose`  | Full signal details, all evidence, file:line references |
+| `--json`     | Raw JSON output (schema v1)                             |
+| `--full`     | Scan entire project (ignore smart scope detection)      |
+| `--deep`     | _(No-op in v1)_ Enable LLM-assisted Tier 2 deep scan    |
+| `--no-cache` | _(No-op in v1)_ Disable cache for this run              |
+| `--help`     | Show help message                                       |
 
 ### Scope Resolution Priority
 
 **vibe-check** auto-detects your frontend source directory:
 
-1. **User-specified path** → uses it directly
-2. **`--full` flag** → scans entire project root
-3. **Smart UI scope** → checks in priority order:
+1. **User-specified path** -- uses it directly
+2. **`--full` flag** -- scans entire project root
+3. **Smart UI scope** -- checks in priority order:
    - Standard layouts: `src/`, `client/src/`, `frontend/src/`, `web/src/`
    - Monorepo patterns: `apps/web/src/`, `apps/frontend/src/`, `packages/ui/src/`
    - Fallback: Scans `app/`, `components/`, `pages/`, `public/`, `styles/` at root
 
 ---
 
-## 📈 Understanding Scores
+## Understanding Scores
 
 ### Overall Slop Score (0-100)
 
-| Score | Band | Meaning |
-|-------|------|---------|
-| **0-19** | 🟢 **Clean** | No significant slop detected |
-| **20-39** | 🟡 **Mild** | Some AI patterns, mostly acceptable |
-| **40-59** | 🟠 **Moderate** | Noticeable AI influence |
-| **60-79** | 🔴 **Heavy** | Strong AI generation signals |
-| **80-100** | ⚫ **Severe** | Overwhelmingly AI-generated |
+| Score      | Band         | Meaning                             |
+| ---------- | ------------ | ----------------------------------- |
+| **0-19**   | **Clean**    | No significant slop detected        |
+| **20-39**  | **Mild**     | Some AI patterns, mostly acceptable |
+| **40-59**  | **Moderate** | Noticeable AI influence             |
+| **60-79**  | **Heavy**    | Strong AI generation signals        |
+| **80-100** | **Severe**   | Overwhelmingly AI-generated         |
 
 ### Category Scores
 
-- **Visual** — Color, typography, effects
-- **Structural** — Layout, components, grid patterns
-- **Content** — Text, buzzwords, CTAs
-- **Asset** — Images, spacing, styling
+- **Typography & Color** (weight 1.0) -- Color palettes, font choices
+- **Spacing & Effects** (weight 1.0) -- Gradients, shadows, border radius, spacing
+- **Content** (weight 0.8) -- Text, buzzwords, CTAs, placeholder data
+- **Structure** (weight 0.8) -- Layout patterns, scaffolding, dependencies
+
+### Intent-Based Attenuation
+
+Projects with evidence of deliberate design (custom CSS variables, design tokens, naming conventions) get attenuated scores on 4 signals: font-crime, purple-plague, border-radius-maximum, shadow-realm. Framework-default CSS variables (shadcn/ui, Tailwind) are filtered out before calculating intent.
 
 ### Confidence Levels
 
-- **High** — 80%+ coverage, all extractors healthy
-- **Medium** — 50-80% coverage or minor extractor issues
-- **Low** — <50% coverage or significant extraction failures
+- **High** -- 80%+ coverage, all extractors healthy
+- **Medium** -- 50-80% coverage or minor extractor issues
+- **Low** -- <50% coverage or significant extraction failures
 
 ---
 
-## ⚙️ Configuration
+## Configuration
 
 Create a `.slop.json` in your project root:
 
 ```json
 {
   "scope": {
-    "exclude": [
-      "**/legacy/**",
-      "**/vendor/**"
-    ]
+    "exclude": ["**/legacy/**", "**/vendor/**"]
   },
   "weights": {
-    "visual": 1.0,
-    "structural": 1.0,
-    "content": 1.0,
-    "asset": 1.0
-  },
-  "thresholds": {
-    "purplePlague": 0.4,
-    "gradientOverload": 0.5,
-    "fontCrime": 0.3
+    "typography-color": 1.0,
+    "spacing-effects": 1.0,
+    "content": 0.8,
+    "structure": 0.8
   }
 }
 ```
 
 ---
 
-## 📂 Project Structure
+## Project Structure
 
 ```
 vibe-check/
@@ -194,46 +202,51 @@ vibe-check/
 │   │   ├── tailwind.ts
 │   │   ├── inline.ts     # JSX/TSX text, structure, img extraction
 │   │   └── css-module.ts
-│   ├── signals/          # 14 slop detection signals
+│   ├── signals/          # 18 slop detection signals
+│   │   ├── font-crime.ts
 │   │   ├── purple-plague.ts
 │   │   ├── gradient-overload.ts
-│   │   ├── font-crime.ts
-│   │   ├── emoji-infestation.ts
-│   │   ├── hero-syndrome.ts
+│   │   ├── whitespace-wasteland.ts
+│   │   ├── shadow-realm.ts
+│   │   ├── border-radius-maximum.ts
 │   │   ├── buzzword-bingo.ts
-│   │   ├── cta-mania.ts
+│   │   ├── hero-syndrome.ts
+│   │   ├── placeholder-content.ts    # NEW v0.2
+│   │   ├── emoji-infestation.ts
 │   │   ├── testimonial-factory.ts
 │   │   ├── card-carnival.ts
 │   │   ├── stock-photo-syndrome.ts
-│   │   ├── whitespace-wasteland.ts
 │   │   ├── cookie-cutter-layout.ts
-│   │   ├── shadow-realm.ts
-│   │   ├── border-radius-maximum.ts
-│   │   └── registry.ts   # Signal registration and orchestration
+│   │   ├── cta-mania.ts
+│   │   ├── scaffold-bloat.ts         # NEW v0.2
+│   │   ├── ai-scaffold-signature.ts  # NEW v0.2
+│   │   ├── dead-dependency.ts        # NEW v0.2
+│   │   ├── data/                     # Buzzword lexicon, placeholder patterns
+│   │   └── registry.ts              # Signal registration and orchestration
 │   ├── ir/               # Intermediate representation (IRStore)
 │   ├── scoring/          # Intent calculation, attenuation, aggregation
 │   ├── scope/            # Smart scope resolution
 │   ├── config/           # Config loader and defaults
 │   └── output/           # JSON and markdown reporters
-├── tests/                # 362 passing tests
+├── tests/                # 445 passing tests
 ├── fixtures/             # Test fixtures (clean, slop-heavy)
 └── .claude-plugin/       # Claude Code plugin manifest
 ```
 
 ---
 
-## 🔬 How It Works
+## How It Works
 
 ### Pipeline
 
 ```
-1. Scope Resolution → Detect frontend directories
-2. Extraction       → CSS, Tailwind, JSX/TSX parsing
-3. IR Store         → Centralized fact storage
-4. Signal Analysis  → Run 14 detection signals
-5. Intent Scoring   → Marketing vs. app vs. docs classification
-6. Attenuation      → Adjust scores based on project intent
-7. Aggregation      → Compute category and overall scores
+1. Scope Resolution → Detect frontend directories, build file list
+2. Extraction       → CSS, Tailwind, JSX/TSX parsing → IR facts
+3. IR Store         → Centralized fact storage (Style, Color, Text, Structural)
+4. Signal Analysis  → Run 18 detection signals (some use file list + project root)
+5. Intent Scoring   → Custom CSS vars, design tokens → None/Partial/Full tier
+6. Attenuation      → Adjust 4 attenuatable signals based on intent tier
+7. Aggregation      → Power mean (p=2) per category, weighted sum overall
 8. Reporting        → JSON + Markdown output
 ```
 
@@ -247,13 +260,14 @@ vibe-check/
 ### Signals
 
 Each signal:
-- Analyzes facts from IR Store
+
+- Analyzes facts from IR Store (and optionally file list / project root)
 - Returns a **score (0-1)** and **evidence** with file:line references
-- Supports **attenuation** based on project intent (marketing sites get less penalty)
+- Supports **attenuation** based on project intent
 
 ---
 
-## 🛠️ Development
+## Development
 
 ### Install Dependencies
 
@@ -265,7 +279,7 @@ bun install
 
 ```bash
 bun test
-# 362 passing tests
+# 445 passing tests across 31 test files
 ```
 
 ### Build
@@ -292,48 +306,32 @@ slop-scan fixtures/clean --full
 
 ---
 
-## 🎯 Example Scan Results
+## v0.2.0 Changelog
 
-### Marketing Site (Slop-Heavy)
+### New Signals (4)
 
-```json
-{
-  "slopScore": 73.2,
-  "band": "heavy",
-  "confidence": "high",
-  "categories": {
-    "visual": 82.5,
-    "structural": 68.0,
-    "content": 71.3,
-    "asset": 70.8
-  },
-  "signals": {
-    "purple-plague": { "score": 0.9, "evidence": [...] },
-    "emoji-infestation": { "score": 0.7, "evidence": [...] },
-    "card-carnival": { "score": 0.8, "evidence": [...] }
-  }
-}
-```
+- **Scaffold Bloat** -- Detects excessive UI library component ratio vs custom code
+- **Placeholder Content** -- Detects fake names, lorem ipsum, placeholder metrics
+- **AI Scaffold Signature** -- Detects Replit, Bolt, v0, Lovable, Cursor platform artifacts
+- **Dead Dependency** -- Detects heavy packages (framer-motion, three.js, recharts, etc.) installed but never imported
 
-### Production App (Clean)
+### Signal Improvements (6)
 
-```json
-{
-  "slopScore": 12.4,
-  "band": "clean",
-  "confidence": "high",
-  "categories": {
-    "visual": 8.1,
-    "structural": 15.2,
-    "content": 10.5,
-    "asset": 14.7
-  }
-}
-```
+- **Gradient Overload** -- Groups Tailwind gradient declarations by proximity (from-/via-/to- = 1 instance, not 3)
+- **CTA Mania** -- Filters app/functional buttons (Edit, Save, Delete), separate thresholds for marketing vs app pages
+- **Buzzword Bingo** -- Lowered detection threshold, added Tier C words and 5 new phrase patterns
+- **Card Carnival** -- Increased pair gap (10 -> 15 lines), pseudo-card detection for untagged JSX headings
+- **Cookie Cutter Layout** -- Excludes UI library files (shadcn/ui, Radix, node_modules)
+- **Intent Detection** -- Filters 60+ framework-default CSS variables (shadcn/ui, Tailwind) from intent score
+
+### Infrastructure
+
+- Extended `SignalContext` with `fileList` and `projectRoot` for file-level analysis
+- 445 tests across 31 test files (up from 362 across 27)
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 Contributions welcome! Please:
 
@@ -351,27 +349,29 @@ See existing signals in `src/signals/` for examples. Each signal:
 2. Declares `needs` (which extractors it depends on)
 3. Defines `analyze(ctx: SignalContext): SignalResult`
 4. Registers in `src/signals/registry.ts`
+5. Adds signal ID to a category in `src/scoring/categories.ts`
 
 ---
 
-## 📄 License
+## License
 
-MIT © [Wenyao Gao](https://github.com/edwingao28)
+MIT (c) [Wenyao Gao](https://github.com/edwingao28)
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 Built with:
-- [Babel](https://babeljs.io/) — JSX/TSX parsing
-- [PostCSS](https://postcss.org/) — CSS parsing
-- [Bun](https://bun.sh/) — Fast testing and builds
+
+- [Babel](https://babeljs.io/) -- JSX/TSX parsing
+- [PostCSS](https://postcss.org/) -- CSS parsing
+- [Bun](https://bun.sh/) -- Fast testing and builds
 
 Inspired by public discussions on AI-generated web design patterns.
 
 ---
 
-## 🔗 Links
+## Links
 
 - [GitHub Repository](https://github.com/edwingao28/vibe-check)
 - [Report Issues](https://github.com/edwingao28/vibe-check/issues)

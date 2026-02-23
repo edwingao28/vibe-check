@@ -12,10 +12,15 @@
  *   co-occurrence = distinct tiers present on same page
  *   score = min(1, density * 0.5 + variety/20 * 0.3 + coOccurrence/3 * 0.2)
  *
- * Only flags when density > 2 AND variety > 3.
+ * Only flags when density > 1 AND variety > 2.
  */
 
-import type { SignalDefinition, SignalResult, SignalContext, SignalEvidence } from "./types.js";
+import type {
+  SignalDefinition,
+  SignalResult,
+  SignalContext,
+  SignalEvidence,
+} from "./types.js";
 import type { TextFact } from "../ir/types.js";
 import { BUZZWORDS, PHRASE_PATTERNS } from "./data/buzzwords.js";
 
@@ -83,7 +88,12 @@ function analyzePage(file: string, texts: TextFact[]): PageBuzzwordAnalysis {
   // Check phrase patterns
   const matchedPhrases = new Map<string, { count: number; weight: number }>();
   for (const { pattern, weight } of PHRASE_PATTERNS) {
-    const matches = fullText.match(new RegExp(pattern.source, pattern.flags + (pattern.flags.includes("g") ? "" : "g")));
+    const matches = fullText.match(
+      new RegExp(
+        pattern.source,
+        pattern.flags + (pattern.flags.includes("g") ? "" : "g"),
+      ),
+    );
     if (matches && matches.length > 0) {
       matchedPhrases.set(pattern.source, { count: matches.length, weight });
       weightedSum += weight * matches.length;
@@ -99,8 +109,8 @@ function analyzePage(file: string, texts: TextFact[]): PageBuzzwordAnalysis {
   let score = density * 0.5 + (variety / 20) * 0.3 + (coOccurrence / 3) * 0.2;
   score = Math.min(1, score);
 
-  // Only flag when density > 2 AND variety > 3
-  if (density <= 2 || variety <= 3) {
+  // Only flag when density > 1 AND variety > 2
+  if (density <= 1 || variety <= 2) {
     score = 0;
   }
 
@@ -167,7 +177,9 @@ export const buzzwordBingo: SignalDefinition = {
         }
         const topPhrases: string[] = [];
         for (const [, info] of page.matchedPhrases) {
-          topPhrases.push(`phrase pattern (${info.count}x, weight ${info.weight})`);
+          topPhrases.push(
+            `phrase pattern (${info.count}x, weight ${info.weight})`,
+          );
         }
 
         const parts = [...topWords.slice(0, 5), ...topPhrases.slice(0, 3)];
@@ -175,7 +187,8 @@ export const buzzwordBingo: SignalDefinition = {
         evidence.push({
           summary: `${page.variety} buzzwords/phrases in ${page.file} (density: ${page.weightedDensity.toFixed(1)})`,
           files: [page.file],
-          detail: `Matches: ${parts.join(", ")}. ` +
+          detail:
+            `Matches: ${parts.join(", ")}. ` +
             `Tiers present: ${page.coOccurrence}/3. ` +
             `Total words: ${page.totalWords}.`,
         });

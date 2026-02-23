@@ -1,6 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { runSignals, allSignals, tier1Signals, tier2Signals } from "../../src/signals/registry.js";
-import { makeContext, makeFact, makeColor } from "./__helpers__/make-context.js";
+import {
+  runSignals,
+  allSignals,
+  tier1Signals,
+  tier2Signals,
+} from "../../src/signals/registry.js";
+import {
+  makeContext,
+  makeFact,
+  makeColor,
+} from "./__helpers__/make-context.js";
 import { DEFAULT_CONFIG } from "../../src/config/defaults.js";
 import type { SlopConfig } from "../../src/config/types.js";
 
@@ -15,8 +24,8 @@ describe("Signal Registry", () => {
 
     const results = runSignals(ctx, DEFAULT_CONFIG);
 
-    // Should have results for all 14 signals (6 Tier 1 + 8 Tier 2)
-    expect(results.length).toBe(14);
+    // Should have results for all 18 signals (6 Tier 1 + 12 Tier 2)
+    expect(results.length).toBe(18);
 
     const ids = results.map((r) => r.id);
     expect(ids).toContain("font-crime");
@@ -33,6 +42,10 @@ describe("Signal Registry", () => {
     expect(ids).toContain("testimonial-factory");
     expect(ids).toContain("card-carnival");
     expect(ids).toContain("stock-photo-syndrome");
+    expect(ids).toContain("scaffold-bloat");
+    expect(ids).toContain("placeholder-content");
+    expect(ids).toContain("ai-scaffold-signature");
+    expect(ids).toContain("dead-dependency");
   });
 
   it("skips disabled signals", () => {
@@ -53,7 +66,7 @@ describe("Signal Registry", () => {
 
     expect(ids).not.toContain("font-crime");
     expect(ids).not.toContain("shadow-realm");
-    expect(results.length).toBe(12); // 14 total - 2 disabled
+    expect(results.length).toBe(16); // 18 total - 2 disabled
   });
 
   it("returns insufficient_data when ALL dependencies failed", () => {
@@ -101,9 +114,7 @@ describe("Signal Registry", () => {
 
   it("runs signals normally when all dependencies are healthy", () => {
     const ctx = makeContext({
-      facts: [
-        makeFact({ property: "font-family", value: "Inter" }),
-      ],
+      facts: [makeFact({ property: "font-family", value: "Inter" })],
     });
 
     const results = runSignals(ctx, DEFAULT_CONFIG);
@@ -144,8 +155,8 @@ describe("Signal Registry", () => {
 
   it("exports tier1Signals, tier2Signals, and allSignals arrays", () => {
     expect(tier1Signals).toHaveLength(6);
-    expect(tier2Signals).toHaveLength(8);
-    expect(allSignals).toHaveLength(14);
+    expect(tier2Signals).toHaveLength(12);
+    expect(allSignals).toHaveLength(18);
 
     // allSignals should contain all tier1 and tier2 signals
     for (const signal of [...tier1Signals, ...tier2Signals]) {
@@ -199,6 +210,10 @@ describe("Signal Registry", () => {
           "testimonial-factory",
           "card-carnival",
           "stock-photo-syndrome",
+          "scaffold-bloat",
+          "placeholder-content",
+          "ai-scaffold-signature",
+          "dead-dependency",
         ],
       },
     };

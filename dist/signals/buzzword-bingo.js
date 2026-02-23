@@ -12,7 +12,7 @@
  *   co-occurrence = distinct tiers present on same page
  *   score = min(1, density * 0.5 + variety/20 * 0.3 + coOccurrence/3 * 0.2)
  *
- * Only flags when density > 2 AND variety > 3.
+ * Only flags when density > 1 AND variety > 2.
  */
 import { BUZZWORDS, PHRASE_PATTERNS } from "./data/buzzwords.js";
 /**
@@ -76,8 +76,8 @@ function analyzePage(file, texts) {
     // Score formula: min(1, density * 0.5 + variety/20 * 0.3 + coOccurrence/3 * 0.2)
     let score = density * 0.5 + (variety / 20) * 0.3 + (coOccurrence / 3) * 0.2;
     score = Math.min(1, score);
-    // Only flag when density > 2 AND variety > 3
-    if (density <= 2 || variety <= 3) {
+    // Only flag when density > 1 AND variety > 2
+    if (density <= 1 || variety <= 2) {
         score = 0;
     }
     return {

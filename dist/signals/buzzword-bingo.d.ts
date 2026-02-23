@@ -12,7 +12,7 @@
  *   co-occurrence = distinct tiers present on same page
  *   score = min(1, density * 0.5 + variety/20 * 0.3 + coOccurrence/3 * 0.2)
  *
- * Only flags when density > 2 AND variety > 3.
+ * Only flags when density > 1 AND variety > 2.
  */
 import type { SignalDefinition } from "./types.js";
 export declare const buzzwordBingo: SignalDefinition;

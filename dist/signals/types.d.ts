@@ -32,4 +32,8 @@ export interface SignalContext {
     suppressions: import("../ir/types.js").SuppressionFact[];
     extractorHealth: Map<string, import("../extractors/types.js").ExtractorStatus>;
     config: import("../config/types.js").SlopConfig;
+    /** All scoped file paths (relative to projectRoot). Available for file-level signals. */
+    fileList?: string[];
+    /** Absolute path to the project root. Available for file-level signals. */
+    projectRoot?: string;
 }

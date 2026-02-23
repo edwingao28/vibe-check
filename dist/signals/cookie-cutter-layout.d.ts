@@ -5,6 +5,9 @@
  * suggesting template-driven design. Uses Jaccard similarity on page
  * fingerprints (ordered lists of section types).
  *
+ * UI library component files (shadcn/ui, Radix, etc.) are filtered out
+ * before comparison since their structure is library-determined.
+ *
  * Scoring:
  *   fingerprint = ordered list of sectionType per page
  *   similarity = Jaccard similarity between fingerprint pairs

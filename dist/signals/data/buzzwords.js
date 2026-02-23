@@ -58,6 +58,12 @@ export const BUZZWORDS = {
             "comprehensive",
             "flexible",
             "efficient",
+            "trending",
+            "relevant",
+            "beautifully",
+            "driven",
+            "actionable",
+            "insights",
         ],
     },
 };
@@ -78,5 +84,13 @@ export const PHRASE_PATTERNS = [
     { pattern: /join (?:thousands|millions|hundreds) of .+ who/i, weight: 4 },
     { pattern: /it'?s (?:time to|never been easier)/i, weight: 3 },
     { pattern: /from .+ to .+,? we'?ve got you covered/i, weight: 5 },
+    { pattern: /discover .+ before/i, weight: 4 },
+    {
+        pattern: /powered by (?:ai|artificial intelligence|machine learning)/i,
+        weight: 3,
+    },
+    { pattern: /delivered (?:straight |right |directly )?to your/i, weight: 3 },
+    { pattern: /never miss (?:a|an|another)/i, weight: 3 },
+    { pattern: /stay ahead of/i, weight: 3 },
 ];
 //# sourceMappingURL=buzzwords.js.map
